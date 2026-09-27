@@ -1,0 +1,5509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>AETHER Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#03060C; --bg:#050A14; --panel:rgba(9,16,29,.80); --panel-solid:#09101D; --panel-2:#0D1626;
+  --line:#16233A; --line-2:#22354F; --line-3:#33507A;
+  --text:#E3EBF5; --text-2:#9DADC2; --text-3:#6A7D98;
+  --cyan:#5FD0E4; --cyan-dim:rgba(95,208,228,.12); --blue:#4C8DFF; --blue-dim:rgba(76,141,255,.13);
+  --amber:#EFA43E; --amber-dim:rgba(239,164,62,.12); --red:#FF5B55; --red-dim:rgba(255,91,85,.13);
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sbw:220px; --top:56px; --status:32px; --r:3px; --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:dark; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root:not([data-theme="light"]), :root[data-theme="dark"]{ color-scheme:dark; }
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);background:var(--void)}
+body{height:100%;margin:0;overflow:hidden;color:var(--text);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;
+  background:radial-gradient(1200px 700px at 78% -10%,rgba(40,80,150,.14),transparent 60%),radial-gradient(900px 600px at -10% 110%,rgba(30,90,120,.10),transparent 60%),var(--void)}
+#root{height:100%}
+button,input,textarea{font:inherit;color:inherit}
+a{color:inherit}
+h1,h2,h3,p{margin:0}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.label{font:500 11px/1.3 var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--text-3)}
+.muted{color:var(--text-2)}
+.unit{font:400 12px var(--sans);color:var(--text-3);margin-left:6px;letter-spacing:.02em}
+.meta{font-size:11px;color:var(--text-3)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:2px}
+h1:focus,main:focus{outline:none}
+.ok{--c:var(--cyan)} .warn{--c:var(--amber)} .crit{--c:var(--red)} .idle{--c:var(--text-3)} .info{--c:var(--blue)}
+.icon{flex:none;display:block}
+.rot90{transform:rotate(90deg)}
+.hide-sm{} .hide-md{}
+
+/* starfield */
+.starfield{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* status atoms */
+.dot{width:7px;height:7px;border-radius:50%;background:var(--c,var(--cyan));box-shadow:0 0 0 3px color-mix(in srgb,var(--c,var(--cyan)) 16%,transparent);flex:none;display:inline-block}
+.dot.pulse{animation:dotp 2.4s ease-in-out infinite}
+@keyframes dotp{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--c) 0%,transparent)}}
+.pill{display:inline-flex;align-items:center;gap:8px;height:22px;padding:0 9px 0 8px;border:1px solid color-mix(in srgb,var(--c) 35%,transparent);background:color-mix(in srgb,var(--c) 9%,transparent);color:var(--c);border-radius:2px;font:500 11px var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.pill .dot{width:6px;height:6px;box-shadow:none}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:0 12px;border:1px solid var(--line-2);background:rgba(255,255,255,.015);color:var(--text-2);border-radius:2px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background .2s,border-color .2s,color .2s,transform .1s}
+.btn:hover:not(:disabled){color:var(--text);border-color:var(--line-3);background:rgba(255,255,255,.04)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.icon{width:32px;padding:0}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn.icon.sm{width:28px;padding:0}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover:not(:disabled){background:rgba(255,255,255,.05)}
+.btn.primary{border-color:rgba(95,208,228,.45);background:rgba(95,208,228,.1);color:var(--cyan)}
+.btn.primary:hover:not(:disabled){background:rgba(95,208,228,.18);color:#BFF1FA;border-color:rgba(95,208,228,.7)}
+.btn.wide{width:100%}
+.btn.toggle[aria-pressed="true"]{color:var(--cyan);border-color:rgba(95,208,228,.4);background:var(--cyan-dim)}
+.linklike{background:none;border:0;padding:0;color:var(--cyan);cursor:pointer;text-align:left;font-size:inherit}
+.linklike:hover{text-decoration:underline}
+kbd{font:500 10px var(--mono);padding:2px 5px;border:1px solid var(--line-2);border-radius:2px;color:var(--text-3);background:rgba(255,255,255,.02)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:2px;padding:2px;gap:2px;background:rgba(0,0,0,.2)}
+.seg button{height:28px;padding:0 11px;border:0;background:transparent;color:var(--text-3);border-radius:1px;cursor:pointer;font-size:12.5px;white-space:nowrap;transition:background .2s,color .2s}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--cyan-dim);color:var(--cyan)}
+.seg-sm button{height:24px;padding:0 9px;font-size:12px}
+.seg-scroll{overflow-x:auto;scrollbar-width:none;max-width:100%}
+.seg-scroll::-webkit-scrollbar{display:none}
+
+/* panels */
+.panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.instrument::before{content:"";position:absolute;inset:-1px;pointer-events:none;z-index:2;
+  --t:rgba(95,208,228,.55);
+  background:
+   linear-gradient(var(--t),var(--t)) top left/12px 1px no-repeat, linear-gradient(var(--t),var(--t)) top left/1px 12px no-repeat,
+   linear-gradient(var(--t),var(--t)) top right/12px 1px no-repeat, linear-gradient(var(--t),var(--t)) top right/1px 12px no-repeat,
+   linear-gradient(var(--t),var(--t)) bottom left/12px 1px no-repeat, linear-gradient(var(--t),var(--t)) bottom left/1px 12px no-repeat,
+   linear-gradient(var(--t),var(--t)) bottom right/12px 1px no-repeat, linear-gradient(var(--t),var(--t)) bottom right/1px 12px no-repeat}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;padding:8px 16px;border-bottom:1px solid var(--line)}
+.panel-head h2.label{color:var(--text-2)}
+.panel-aside{display:flex;align-items:center;gap:8px}
+.panel-body{padding:16px}
+.panel-body.flush{padding:0}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* shell */
+.shell{position:relative;z-index:1;display:grid;grid-template-columns:var(--sbw) minmax(0,1fr);grid-template-rows:var(--top) minmax(0,1fr) var(--status);height:100%;transition:grid-template-columns .32s var(--ease)}
+.shell.collapsed{--sbw:64px}
+.skip{position:absolute;left:12px;top:-60px;z-index:100;background:var(--panel-2);border:1px solid var(--cyan);padding:8px 12px;color:var(--text);text-decoration:none}
+.skip:focus{top:10px}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 14px 0 14px;border-bottom:1px solid var(--line);background:rgba(3,7,14,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);min-width:0;z-index:5}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-mark{fill:none;stroke:var(--cyan);stroke-width:1.4}
+.brand-mark circle{fill:rgba(95,208,228,.15)}
+.brand-mark .bm-dot{fill:var(--cyan);stroke:none}
+.brand-word{font:500 15px var(--sans);letter-spacing:.42em;color:var(--text);padding-right:2px}
+.brand-sub{font-size:12px;color:var(--text-3);padding-left:12px;border-left:1px solid var(--line-2);white-space:nowrap}
+.tb-mission{display:flex;align-items:center;gap:12px;margin-left:18px;padding-left:18px;border-left:1px solid var(--line);font-size:13px;color:var(--text-2);white-space:nowrap}
+.tb-mission .num{color:var(--text)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.cmdk{display:flex;align-items:center;gap:10px;height:32px;padding:0 8px 0 10px;border:1px solid var(--line-2);background:rgba(255,255,255,.02);border-radius:2px;color:var(--text-3);cursor:pointer;font-size:13px;min-width:210px;transition:border-color .2s,color .2s}
+.cmdk:hover{border-color:var(--line-3);color:var(--text-2)}
+.cmdk kbd{margin-left:auto}
+.bell{position:relative}
+.badge{position:absolute;top:1px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--amber);color:#1B1003;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;line-height:1}
+.tb-clocks{display:flex;gap:18px;padding-left:14px;border-left:1px solid var(--line)}
+.tb-clocks>div{display:flex;flex-direction:column;line-height:1.15}
+.tb-clocks .label{font-size:9.5px}
+.tb-clocks .num{font-size:13.5px;color:var(--text)}
+
+.sidebar{grid-row:2;display:flex;flex-direction:column;justify-content:space-between;padding:14px 10px;border-right:1px solid var(--line);background:rgba(3,7,14,.55);overflow:hidden;min-width:0}
+.nav{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.nav-item{position:relative;display:flex;align-items:center;gap:13px;height:40px;padding:0 12px;border-radius:2px;color:var(--text-2);text-decoration:none;white-space:nowrap;transition:background .2s,color .2s}
+.nav-item:hover{background:rgba(255,255,255,.035);color:var(--text)}
+.nav-item.active{color:var(--text);background:linear-gradient(90deg,rgba(95,208,228,.1),rgba(95,208,228,0))}
+.nav-item.active::before{content:"";position:absolute;left:-10px;top:9px;bottom:9px;width:2px;background:var(--cyan)}
+.nav-item.active .icon{color:var(--cyan)}
+.nav-label{transition:opacity .2s}
+.nav-flag{width:6px;height:6px;border-radius:50%;background:var(--amber);margin-left:auto}
+.collapsed .nav-label,.collapsed .sb-event{opacity:0;pointer-events:none}
+.collapsed .nav-flag{position:absolute;left:30px;top:10px}
+.sb-foot{display:flex;flex-direction:column;gap:10px}
+.sb-event{display:flex;flex-direction:column;gap:2px;padding:12px;border:1px solid var(--line);border-radius:2px;background:rgba(0,0,0,.2);white-space:nowrap;transition:opacity .2s}
+.sb-ev-name{font-size:13px;color:var(--text-2)}
+.sb-ev-t{font-size:17px;color:var(--text)}
+.sb-collapse{justify-content:flex-start;gap:13px;padding:0 12px;height:36px;color:var(--text-3)}
+
+.main{grid-row:2;grid-column:2;overflow-y:auto;overflow-x:hidden;min-width:0;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.page-wrap{animation:pageIn .38s var(--ease) both}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}}
+.page{max-width:1560px;margin:0 auto;padding:26px 28px 44px;display:flex;flex-direction:column;gap:16px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:0;border-top:1px solid var(--line);background:rgba(3,7,14,.88);font-size:12px;color:var(--text-2);overflow:hidden;white-space:nowrap}
+.sb-item{display:flex;align-items:center;gap:8px;padding:0 16px;height:100%;border-right:1px solid var(--line)}
+.sb-item .label{font-size:10px}
+.sb-item .num{color:var(--text)}
+.sb-item .u{color:var(--text-3);font-size:11px;margin-left:-4px}
+.sb-item .dot{width:6px;height:6px}
+.warn-t{color:var(--amber);font-size:11px}
+.sb-end{margin-left:auto;border-right:0;border-left:1px solid var(--line)}
+.bottomnav{display:none}
+
+/* page header */
+.phead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-bottom:4px}
+.phead h1,.mission-head h1{font:300 30px/1.1 var(--sans);letter-spacing:-.01em}
+.phead p{margin-top:8px;max-width:66ch;color:var(--text-2)}
+.phead-aside{display:flex;align-items:center;gap:12px}
+.live{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-2)}
+.inline-stats{display:flex;gap:26px;margin:0}
+.inline-stats div{display:flex;flex-direction:column}
+.inline-stats dt{font:500 10.5px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--text-3)}
+.inline-stats dd{margin:0;font-size:22px}
+
+.mission-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;padding-bottom:4px}
+.mh-name{margin-top:6px;color:var(--text-2);font-size:15px}
+.mh-name .num{color:var(--cyan);margin-right:8px}
+.mh-facts{display:flex;gap:0;margin:0;flex-wrap:wrap}
+.mh-facts>div{padding:0 20px;border-left:1px solid var(--line)}
+.mh-facts dt{font:500 10.5px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px}
+.mh-facts dd{margin:0;font-size:15px;color:var(--text)}
+
+/* grid */
+.g{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.s12{grid-column:span 12}.s8{grid-column:span 8}.s7{grid-column:span 7}.s6{grid-column:span 6}.s5{grid-column:span 5}.s4{grid-column:span 4}
+
+/* telemetry cards */
+.tstrip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.tcard{display:flex;flex-direction:column;gap:4px;text-align:left;padding:13px 15px 11px;border:1px solid var(--line);background:var(--panel);border-radius:var(--r);cursor:pointer;min-width:0;transition:border-color .25s,background .25s}
+.tcard:hover{border-color:var(--line-3)}
+.tcard[aria-pressed="true"]{border-color:rgba(95,208,228,.5);background:linear-gradient(180deg,rgba(95,208,228,.07),rgba(95,208,228,0) 70%),var(--panel)}
+.tcard.warn[aria-pressed="true"]{border-color:rgba(239,164,62,.55)}
+.tc-top{display:flex;align-items:center;justify-content:space-between}
+.tc-val{display:flex;align-items:baseline;margin-top:4px}
+.tc-val .num{font-size:25px;font-weight:400;color:var(--text);line-height:1.1}
+.tc-sub{font-size:11.5px;color:var(--text-3)}
+.tc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.tc-trend{font-size:11px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spark{width:72px;height:22px;flex:none;overflow:visible}
+.spark path{fill:none;stroke:var(--cyan);stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:.8}
+.tcard.warn .spark path{stroke:var(--amber)}
+
+/* chart */
+.chart-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:10px;flex-wrap:wrap}
+.chart-now{display:flex;flex-direction:column;align-items:flex-end}
+.chart-now-val{font-size:26px;display:flex;align-items:baseline}
+.chart-wrap{position:relative;width:100%;min-width:0}
+.chart{display:block;touch-action:pan-y;cursor:crosshair}
+.grid-line{stroke:var(--line);stroke-width:1}
+.grid-line.v{stroke-dasharray:2 4}
+.axis-text{fill:var(--text-3);font:11px var(--mono)}
+.chart-line{fill:none;stroke:var(--cyan);stroke-width:1.6;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0;animation:draw .9s var(--ease)}
+@keyframes draw{from{stroke-dashoffset:1}}
+.chart-area{animation:fadeIn .9s ease}
+@keyframes fadeIn{from{opacity:0}}
+.chart-head{fill:var(--cyan)}
+.chart-head-ring{fill:none;stroke:var(--cyan);transform-box:fill-box;transform-origin:center;animation:ring 2.4s ease-out infinite}
+@keyframes ring{from{transform:scale(1);opacity:.8}to{transform:scale(3.4);opacity:0}}
+.limit line{stroke:var(--amber);stroke-dasharray:4 4;opacity:.7}
+.limit text{fill:var(--amber);font:11px var(--sans);opacity:.85}
+.chart-cursor line{stroke:var(--text-3);stroke-dasharray:3 3}
+.chart-cursor circle{fill:var(--void);stroke:var(--text);stroke-width:1.5}
+.chart-tip{position:absolute;pointer-events:none;display:flex;flex-direction:column;padding:7px 10px;background:rgba(6,11,21,.95);border:1px solid var(--line-3);border-radius:2px;white-space:nowrap;z-index:3}
+.tip-v{font-size:14px;color:var(--text)}
+.tip-t{font-size:11px;color:var(--text-3)}
+
+/* orbital map */
+.map-panel .panel-body{overflow:hidden}
+.omap{position:relative;aspect-ratio:960/520;width:100%;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,rgba(20,40,75,.25),transparent 70%)}
+.omap::after{content:"";position:absolute;left:0;right:0;height:1px;top:0;background:linear-gradient(90deg,transparent,rgba(95,208,228,.14),transparent);animation:scan 9s linear infinite;pointer-events:none}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(60vw)}}
+.omap-svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.omap-svg:active{cursor:grabbing}
+.omap-svg:focus-visible{outline-offset:-3px}
+.og-grid circle,.og-grid line{fill:none;stroke:var(--line-2);stroke-width:1;stroke-dasharray:2 5}
+.og-ring-label{fill:var(--text-3);font:10.5px var(--mono)}
+.moon-orbit{fill:none;stroke:rgba(157,173,194,.22);stroke-width:1;stroke-dasharray:1 5}
+.return-leg{fill:none;stroke:rgba(76,141,255,.2);stroke-width:1;stroke-dasharray:3 6}
+.target-orbit{fill:none;stroke:rgba(95,208,228,.55);stroke-width:1.3;stroke-dasharray:6 5}
+.traj-planned{fill:none;stroke:rgba(95,208,228,.6);stroke-width:1.4;stroke-dasharray:5 5}
+.traj-flown{fill:none;stroke:var(--cyan);stroke-width:1.8}
+.atmo{fill:none;stroke:rgba(95,208,228,.4);stroke-width:1}
+.craters circle{fill:rgba(40,45,55,.35);stroke:rgba(255,255,255,.06)}
+.body-label{fill:var(--text-2);font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase}
+.map-mark path{fill:none;stroke:var(--text-2);stroke-width:1.2}
+.map-mark text{fill:var(--text-2);font:11px var(--mono)}
+.preview circle{fill:var(--cyan);opacity:.9}
+.preview text{fill:var(--text-3);font:10.5px var(--sans)}
+.heading line{stroke:var(--text);stroke-width:1.3}
+.heading path{fill:var(--text)}
+.craft-hit{cursor:pointer;outline:none}
+.craft-hit .hit{fill:transparent}
+.craft-mark{fill:var(--void);stroke:#fff;stroke-width:1.8;transition:fill .2s}
+.craft-hit.hov .craft-mark,.craft-hit.sel .craft-mark{fill:var(--cyan)}
+.craft-hit:focus-visible .hit{stroke:var(--cyan);stroke-width:1.5}
+.craft-pulse{fill:none;stroke:#fff;transform-box:fill-box;transform-origin:center;animation:ring 2.6s ease-out infinite}
+.brackets path{fill:none;stroke:var(--cyan);stroke-width:1.5}
+.craft-label{fill:var(--text);font:500 12px var(--mono);letter-spacing:.04em}
+.scalebar path{fill:none;stroke:var(--text-2);stroke-width:1}
+.scalebar text{fill:var(--text-2);font:10.5px var(--mono)}
+.omap-tools{position:absolute;top:10px;right:10px;display:flex;gap:2px;padding:3px;background:rgba(4,8,16,.78);border:1px solid var(--line);border-radius:2px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.omap-tools .btn{border-color:transparent;background:transparent;height:30px;width:30px}
+.omap-tools .btn:hover{background:rgba(255,255,255,.06)}
+.omap-tools .btn.toggle[aria-pressed="true"]{background:var(--cyan-dim)}
+.tool-sep{width:1px;background:var(--line-2);margin:4px 3px}
+.omap-tip{position:absolute;display:flex;flex-direction:column;gap:2px;padding:9px 11px;background:rgba(5,10,20,.94);border:1px solid var(--line-3);border-radius:2px;font-size:12px;color:var(--text-2);pointer-events:none;white-space:nowrap;z-index:3}
+.omap-tip strong{font:500 12px var(--mono);color:var(--text);margin-bottom:3px}
+.omap-tip b{font-weight:400;color:var(--text);margin-left:6px}
+.omap-tip em{font-style:normal;color:var(--cyan);font-size:11px;margin-top:3px}
+.omap-card{position:absolute;top:10px;left:10px;width:min(290px,calc(100% - 20px));padding:12px 14px 14px;background:rgba(5,10,20,.94);border:1px solid rgba(95,208,228,.35);border-radius:2px;animation:cardIn .25s var(--ease);z-index:3}
+@keyframes cardIn{from{opacity:0;transform:translateY(-4px)}}
+.oc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.oc-head strong{display:block;font:500 16px var(--mono);margin-top:2px}
+.omap-card dl{margin:0 0 12px}
+.omap-card dl div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.omap-card dt{color:var(--text-3)} .omap-card dd{margin:0;color:var(--text)}
+.omap-legend{position:absolute;left:12px;bottom:10px;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--text-3);pointer-events:none}
+.omap-legend span{display:flex;align-items:center;gap:6px}
+.omap-legend i{display:inline-block;width:18px;height:0;border-top:1.8px solid var(--cyan)}
+.omap-legend .lg-planned{border-top:1.4px dashed rgba(95,208,228,.7)}
+.omap-legend .lg-target{border-top:1.4px dashed rgba(95,208,228,.55)}
+.omap-legend .lg-moon{border-top:1px dotted rgba(157,173,194,.55)}
+.lg-note{opacity:.8}
+.omap-readout{position:absolute;right:12px;top:52px;font-size:10.5px;color:var(--text-3);pointer-events:none;text-align:right}
+.omap-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 12px;background:rgba(5,10,20,.9);border:1px solid var(--line-2);border-radius:2px;font-size:12.5px;color:var(--text-2);opacity:0;transition:opacity .25s;pointer-events:none}
+.omap-hint.on{opacity:1}
+
+/* situation */
+.situation{height:100%}
+.sit-body{display:flex;flex-direction:column;padding:0}
+.sit-block{padding:15px 16px;border-bottom:1px solid var(--line)}
+.sit-block:last-child{border-bottom:0}
+.sit-q{font:500 11px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+.sit-big{display:flex;align-items:baseline;flex-wrap:wrap}
+.sit-big .num{font-size:30px;line-height:1.1;color:var(--text)}
+.sit-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--text-3);margin-top:6px}
+.sit-row .num{color:var(--text-2)}
+.sit-phase{font-size:16px;color:var(--text)}
+.sit-count{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:8px}
+.sit-count .count{font-size:22px;color:var(--cyan)}
+.sit-verdict{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--text)}
+.sit-verdict.warn{color:var(--text)}
+.sys-chips{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sys-chip{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 9px;border:1px solid var(--line-2);background:transparent;border-radius:2px;color:var(--text-2);font-size:12px;cursor:pointer;transition:border-color .2s,color .2s}
+.sys-chip:hover{color:var(--text);border-color:var(--line-3)}
+.sys-chip .dot{width:6px;height:6px;box-shadow:none}
+.sys-chip.warn{border-color:rgba(239,164,62,.45);color:var(--amber)}
+
+/* radar */
+.radar{display:flex;flex-direction:column;align-items:center;gap:12px}
+.radar-svg{width:100%;max-width:300px;height:auto;overflow:visible}
+.r-ring{fill:none;stroke:var(--line-2)}
+.r-ring:last-of-type{stroke:var(--line-3)}
+.r-tick{stroke:var(--line-3)}
+.r-cross{stroke:var(--line);stroke-dasharray:2 4}
+.r-deg{fill:var(--text-3);font:10px var(--mono)}
+.r-rlabel{fill:var(--text-3);font:9px var(--mono)}
+.r-sweep{transform-origin:0 0;animation:spin linear infinite}
+.r-sweep path{fill:var(--cyan)}
+.r-sweep.still{animation:none;opacity:.5}
+.r-lead{stroke:var(--cyan);stroke-width:1.3}
+@keyframes spin{to{transform:rotate(360deg)}}
+.r-blip{opacity:.3;animation:blip linear infinite}
+.r-blip.still{animation:none;opacity:1}
+@keyframes blip{0%{opacity:1}65%{opacity:.3}100%{opacity:.3}}
+.r-obj circle,.r-obj rect{fill:var(--text)}
+.r-obj.body circle{fill:#C9CFD8}
+.r-obj.debris rect{fill:var(--amber)}
+.r-obj text{fill:var(--text-3);font:10px var(--sans)}
+.r-self{fill:var(--cyan)}
+.radar-table{width:100%;border-collapse:collapse;font-size:12px}
+.radar-table th{text-align:left;font:500 10px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);padding:4px 0;border-bottom:1px solid var(--line)}
+.radar-table td{padding:5px 0;border-bottom:1px solid var(--line);color:var(--text-2)}
+.radar-table th:not(:first-child),.radar-table td:not(:first-child){text-align:right}
+
+/* timeline */
+.timeline{list-style:none;margin:0;padding:0;position:relative}
+.timeline::before{content:"";position:absolute;left:83px;top:6px;bottom:6px;width:1px;background:var(--line-2)}
+.tl-item{display:grid;grid-template-columns:70px 28px minmax(0,1fr);align-items:start;padding:9px 0}
+.tl-item time{font-size:12px;color:var(--text-3);padding-top:1px}
+.tl-node{width:9px;height:9px;margin:5px 0 0 9px;border:1.5px solid var(--cc,var(--text-3));background:var(--void);border-radius:50%;position:relative;z-index:1}
+.tl-title{color:var(--text);font-size:14px}
+.tl-body p{color:var(--text-2);font-size:13px;margin-top:3px;max-width:72ch}
+.tl-cat{display:inline-block;margin-top:6px;font:500 10px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--cc,var(--text-3))}
+.timeline.compact .tl-item{padding:7px 0}
+.timeline.compact .tl-title{font-size:13.5px}
+.cat-navigation{--cc:var(--cyan)} .cat-telemetry{--cc:var(--blue)} .cat-communication{--cc:#8FB4E8} .cat-system{--cc:var(--text-2)} .cat-alert{--cc:var(--amber)}
+.empty{color:var(--text-3);padding:18px 0;font-size:13px;list-style:none}
+
+/* mini msgs */
+.mini-msgs{list-style:none;margin:0;padding:0}
+.mini-msgs li{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.mini-msgs li:last-child{border-bottom:0}
+.mm-t{font-size:11.5px;color:var(--text-3)}
+.mm-src{font:500 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--sc)}
+.mm-text{grid-column:1/-1;font-size:13px;color:var(--text-2)}
+.src-control{--sc:var(--cyan)} .src-craft{--sc:var(--text)} .src-ground{--sc:var(--blue)} .src-auto{--sc:#9AA9BE} .src-all{--sc:var(--text-2)}
+
+/* orbit page */
+.phase-now{font:300 24px/1.2 var(--sans);color:var(--text);margin-bottom:6px}
+.progress-head{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 8px}
+.progress-head .num{font-size:18px;color:var(--text)}
+.seg-bar{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;height:12px}
+.seg-bar i{background:var(--line);border-radius:1px}
+.seg-bar i.on{background:var(--cyan)}
+.kv{margin:0}
+.kv div{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.kv div:last-child{border-bottom:0}
+.kv dt{color:var(--text-3)}
+.kv dd{margin:0;color:var(--text);text-align:right}
+.phases{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0}
+.ph{display:flex;flex-direction:column;gap:4px;padding:4px 14px 4px 14px;border-left:1px solid var(--line);position:relative}
+.ph::before{content:"";position:absolute;left:-1px;top:0;width:1px;height:100%}
+.ph.done::before{background:rgba(95,208,228,.45)}
+.ph.current::before{background:var(--cyan);width:2px}
+.ph-n{font-size:11px;color:var(--text-3)}
+.ph-name{font-size:14px;color:var(--text-2)}
+.ph.current .ph-name{color:var(--text)}
+.ph.next .ph-name{color:var(--text-3)}
+.ph-when{font-size:11.5px;color:var(--text-3)}
+.ph.current .ph-when{color:var(--cyan)}
+
+/* spacecraft */
+.craft-body{display:flex;align-items:center}
+.craft-svg{display:block;width:100%;height:auto}
+.craft-ref line,.craft-ref path{stroke:var(--line-2);stroke-dasharray:3 5;fill:none}
+.craft-ref text{fill:var(--text-3);font:10.5px var(--mono)}
+.part{cursor:pointer;outline:none}
+.part .shape{stroke:#3A5579;stroke-width:1.3;fill-opacity:1;transition:stroke .2s,filter .2s}
+.part .shape:not([fill]){fill:#12203A}
+.part .inner{fill:none;stroke:#2C4264;stroke-dasharray:3 3}
+.part .strut{stroke:#3A5579;stroke-width:2}
+.part:hover .shape,.part:focus-visible .shape{stroke:#8CB3DE}
+.part.sel .shape,.part.sel .strut{stroke:var(--cyan)}
+.part.sel .shape{filter:drop-shadow(0 0 6px rgba(95,208,228,.35))}
+.part.st-warn .shape{stroke:rgba(239,164,62,.8)}
+.part.st-warn.sel .shape{stroke:var(--amber);filter:drop-shadow(0 0 6px rgba(239,164,62,.35))}
+.part-label circle{fill:var(--text-3)}
+.part-label polyline{fill:none;stroke:var(--line-3);stroke-width:1}
+.part-label text{fill:var(--text-2);font:500 11.5px var(--sans);letter-spacing:.1em;text-transform:uppercase}
+.part-label .part-state{fill:var(--amber);font-size:10.5px}
+.part.sel .part-label text{fill:var(--cyan)}
+.part.sel .part-label circle{fill:var(--cyan)}
+.part.sel .part-label polyline{stroke:var(--cyan)}
+.part:focus-visible .part-label text{text-decoration:underline}
+.plume{animation:plume 1.4s ease-in-out infinite alternate}
+@keyframes plume{from{opacity:.55}to{opacity:1}}
+.sub-detail{display:flex;flex-direction:column;gap:14px}
+.sd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.sd-head h2{font:300 26px/1.15 var(--sans);margin-top:3px}
+.sd-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.sd-stats>div{background:var(--panel-solid);padding:11px 12px;display:flex;flex-direction:column;gap:3px}
+.sd-v{display:flex;align-items:baseline}
+.sd-v .num{font-size:21px;color:var(--text)}
+.sd-v.small{font-size:14px;color:var(--text);padding-top:5px}
+.bar{display:block;height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px;flex:1}
+.bar i{display:block;height:100%;background:var(--c,var(--cyan));transition:width .6s var(--ease)}
+.spinner{width:13px;height:13px;border:1.5px solid rgba(95,208,228,.3);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+.indet{height:2px;background:var(--line);overflow:hidden;margin-top:-8px}
+.indet i{display:block;height:100%;width:30%;background:var(--cyan);animation:indet 1.1s ease-in-out infinite}
+@keyframes indet{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+.table-scroll{overflow-x:auto;max-width:100%}
+.table{width:100%;border-collapse:collapse;font-size:13px;min-width:620px}
+.table th,.table td{padding:11px 16px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.table thead th{font:500 10.5px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--text-3)}
+.table tbody th{font-weight:400;color:var(--text)}
+.table td{color:var(--text-2)}
+.table tbody tr{transition:background .2s}
+.table tbody tr:hover{background:rgba(255,255,255,.02)}
+.table tr.current{background:rgba(95,208,228,.05)}
+.table tbody tr:last-child th,.table tbody tr:last-child td{border-bottom:0}
+.table .right{text-align:right}
+.cell-bar{display:flex;align-items:center;gap:10px;min-width:150px}
+.cell-bar .bar{margin-top:0;max-width:90px}
+
+/* crew */
+.crew-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-items:start}
+.crew-card{padding:18px;display:flex;flex-direction:column;gap:14px;transition:border-color .25s}
+.crew-card.open{border-color:var(--line-3)}
+.cc-top{display:flex;gap:14px;align-items:center}
+.avatar{flex:none}
+.avatar text{fill:#EAF6FF;font:500 15px var(--sans);letter-spacing:.04em}
+.av-ring{fill:none;stroke:rgba(95,208,228,.45);stroke-width:1}
+.cc-id{display:flex;flex-direction:column;min-width:0}
+.cc-id h2{font:400 19px/1.25 var(--sans);color:var(--text)}
+.cc-id .muted{font-size:12.5px}
+.cc-row{display:flex;justify-content:space-between;align-items:center}
+.cc-hr{font-size:12px;color:var(--text-3)}
+.cc-hr .num{font-size:15px;color:var(--text)}
+.cc-task{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border:1px solid var(--line);background:rgba(0,0,0,.18);border-radius:2px}
+.cc-task span:last-child{color:var(--text)}
+.cc-toggle{align-self:flex-start}
+.cc-toggle .icon{transition:transform .25s}
+.cc-more{display:flex;flex-direction:column;gap:12px;animation:cardIn .3s var(--ease)}
+.cc-more[hidden]{display:none}
+.cc-tasks{list-style:none;margin:0;padding:0}
+.cc-tasks li{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
+.t-state{width:38px;flex:none;font:500 10px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+.t-now .t-state{color:var(--cyan)} .t-now{color:var(--text)!important}
+.t-done{color:var(--text-3)!important}
+.cc-vitals .spark{width:100%;height:30px;margin-top:4px}
+
+/* comms */
+.comms-grid{display:grid;grid-template-columns:210px minmax(0,1fr) 280px;gap:16px;align-items:start}
+.ch-list ul{list-style:none;margin:0;padding:8px}
+.ch{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 10px;border:0;background:transparent;color:var(--text-2);border-radius:2px;cursor:pointer;font-size:13px;text-align:left;transition:background .2s,color .2s}
+.ch:hover{background:rgba(255,255,255,.035);color:var(--text)}
+.ch[aria-pressed="true"]{background:rgba(95,208,228,.08);color:var(--text)}
+.ch-mark{width:8px;height:8px;border-radius:1px;background:var(--sc)}
+.ch-n{margin-left:auto;font-size:11px;color:var(--text-3)}
+.console{display:flex;flex-direction:column;height:min(640px,calc(100dvh - 250px));min-height:420px}
+.stream{flex:1;overflow-y:auto;padding:12px 18px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;background:linear-gradient(rgba(95,208,228,.012) 1px,transparent 1px) 0 0/100% 4px}
+.msg{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;padding:9px 0;border-bottom:1px dashed var(--line);animation:msgIn .3s var(--ease)}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}}
+.msg-t{font-size:12px;color:var(--text-3)}
+.msg-src{font:500 11px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--sc);align-self:center}
+.msg-text{grid-column:2;font:400 14px/1.5 var(--mono);color:var(--text);letter-spacing:-.005em}
+.msg.src-auto .msg-text{color:var(--text-2)}
+.msg-status{grid-column:2;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-3);margin-top:2px}
+.msg-status.delivered{color:var(--cyan)}
+.dots{display:inline-flex;gap:3px;margin-left:2px}
+.dots i{width:3px;height:3px;border-radius:50%;background:currentColor;animation:dots 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dots{50%{opacity:.2}}
+.composer{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
+.quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.compose-row{display:flex;gap:8px;align-items:center;position:relative}
+.compose-row input,.search-box input,.note-form textarea{flex:1;min-width:0;height:38px;padding:0 60px 0 12px;background:rgba(0,0,0,.3);border:1px solid var(--line-2);border-radius:2px;color:var(--text);font-family:var(--mono);font-size:13.5px;transition:border-color .2s}
+.compose-row input:focus,.search-box input:focus,.note-form textarea:focus{outline:none;border-color:rgba(95,208,228,.6)}
+.compose-row .btn{height:38px}
+.char-n{position:absolute;right:122px;font-size:10.5px;color:var(--text-3);pointer-events:none}
+.link-panel .panel-body{display:flex;flex-direction:column;gap:14px}
+.sig{display:flex;align-items:flex-end;gap:14px}
+.sig-bars{display:flex;align-items:flex-end;gap:3px;height:28px}
+.sig-bars i{width:5px;background:var(--line-2);border-radius:1px}
+.sig-bars i.on{background:var(--cyan)}
+.sig-v{display:flex;align-items:baseline}
+.sig-v .num{font-size:24px}
+.wave{width:100%;height:40px;display:block;border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+.wave path{fill:none;stroke:var(--cyan);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.7}
+.wave-move{animation:wave 3s linear infinite}
+@keyframes wave{to{transform:translateX(-137.4px)}}
+
+/* logs */
+.log-tools{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.search-box{position:relative;display:flex;align-items:center;min-width:240px}
+.search-box .icon{position:absolute;left:11px;color:var(--text-3)}
+.search-box input{padding:0 12px 0 34px;font-family:var(--sans)}
+.note-form{display:flex;flex-direction:column;gap:10px}
+.note-form textarea{height:auto;padding:10px 12px;resize:vertical;font-family:var(--sans)}
+.cat-bars{list-style:none;margin:0;padding:0}
+.cat-row{display:grid;grid-template-columns:10px 110px 1fr 28px;align-items:center;gap:10px;width:100%;padding:8px 6px;border:0;background:transparent;color:var(--text-2);cursor:pointer;font-size:13px;text-align:left;border-radius:2px}
+.cat-row:hover{background:rgba(255,255,255,.03);color:var(--text)}
+.cat-row[aria-pressed="true"]{background:rgba(95,208,228,.06);color:var(--text)}
+.cat-row .bar{margin:0}
+.cat-row .bar i{background:var(--cc)}
+.cat-row .num{text-align:right;color:var(--text-3)}
+.cat-sw{width:8px;height:8px;border-radius:50%;background:var(--cc)}
+
+/* overlays */
+.scrim{position:fixed;inset:0;background:rgba(1,3,8,.62);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:40;animation:fadeIn .2s ease}
+.drawer-wrap{position:fixed;inset:0;z-index:40;pointer-events:none}
+.drawer-wrap .scrim{opacity:0;transition:opacity .3s;animation:none}
+.drawer-wrap.open{pointer-events:auto}
+.drawer-wrap.open .scrim{opacity:1}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(420px,100%);background:#070D19;border-left:1px solid var(--line-2);z-index:41;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .34s var(--ease);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer-wrap.open .drawer{transform:none}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 8px}
+.drawer-head h2{font:300 22px var(--sans)}
+.drawer-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 18px 14px;border-bottom:1px solid var(--line)}
+.alert-list{list-style:none;margin:0;padding:6px 0;overflow-y:auto;flex:1}
+.alert{position:relative;display:grid;grid-template-columns:20px 1fr;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);animation:msgIn .3s var(--ease)}
+.alert .al-icon,.toast .al-icon{color:var(--c);margin-top:2px}
+.alert.read{opacity:.62}
+.al-top{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-3)}
+.al-level{font:500 10.5px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--c)}
+.alert h3{font:500 14px/1.35 var(--sans);margin:4px 0 3px}
+.alert p{font-size:13px;color:var(--text-2)}
+.al-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.unread-dot{position:absolute;right:16px;top:44px;width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.alert.crit{background:linear-gradient(90deg,var(--red-dim),transparent 40%)}
+.toasts{position:fixed;right:18px;bottom:calc(var(--status) + 16px + env(safe-area-inset-bottom,0px));z-index:45;display:flex;flex-direction:column;gap:8px;width:min(380px,calc(100vw - 36px))}
+.toast{display:grid;grid-template-columns:18px 1fr auto;gap:12px;padding:12px 10px 12px 14px;background:rgba(7,13,25,.97);border:1px solid var(--line-2);border-left:2px solid var(--c);border-radius:2px;animation:toastIn .35s var(--ease);box-shadow:0 12px 30px rgba(0,0,0,.4)}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}}
+.toast-body{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--text-2)}
+.toast-body strong{font-weight:500;font-size:13.5px;color:var(--text)}
+.toast-body .linklike{font-size:12px;margin-top:2px}
+.palette-scrim{display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 16px}
+.palette{width:min(580px,100%);background:#08101E;border:1px solid var(--line-3);border-radius:3px;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:palIn .22s var(--ease);overflow:hidden}
+@keyframes palIn{from{opacity:0;transform:translateY(-8px) scale(.99)}}
+.pal-input{display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid var(--line);color:var(--text-3)}
+.pal-input input{flex:1;height:52px;background:transparent;border:0;outline:none;font-size:15px;color:var(--text)}
+.pal-list{list-style:none;margin:0;padding:6px;max-height:min(360px,50vh);overflow-y:auto}
+.pal-list li{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:2px;color:var(--text-2);cursor:pointer;font-size:14px}
+.pal-list li::before{content:">";font:12px var(--mono);color:var(--text-3)}
+.pal-list li.on{background:rgba(95,208,228,.09);color:var(--text)}
+.pal-list li.on::before{color:var(--cyan)}
+.pal-list li.empty{cursor:default;height:auto;padding:14px 12px}
+.pal-list li.empty::before{content:none}
+.pal-label{flex:1}
+.pal-group{font-size:11px;color:var(--text-3)}
+.pal-foot{display:flex;gap:18px;padding:9px 14px;border-top:1px solid var(--line);font-size:11px;color:var(--text-3)}
+.pal-foot kbd{margin-right:4px}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#08101E;border-top:1px solid var(--line-3);border-radius:10px 10px 0 0;padding:8px 12px calc(16px + env(safe-area-inset-bottom,0px));animation:sheetIn .3s var(--ease);z-index:41}
+@keyframes sheetIn{from{transform:translateY(100%)}}
+.sheet-grip{width:36px;height:4px;border-radius:2px;background:var(--line-3);margin:4px auto 10px}
+.sheet ul{list-style:none;margin:0;padding:0}
+.sheet a,.sheet button{display:flex;align-items:center;gap:14px;width:100%;height:50px;padding:0 10px;border:0;background:transparent;color:var(--text-2);text-decoration:none;font-size:15px;border-radius:3px;cursor:pointer;position:relative}
+.sheet a.active{color:var(--cyan);background:rgba(95,208,228,.07)}
+.sheet .badge{position:static;margin-left:auto}
+
+/* boot */
+.boot{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 45%,rgba(12,26,50,.75),rgba(3,6,12,.97) 70%);transition:opacity .7s ease,filter .7s ease}
+.boot.out{opacity:0;filter:blur(6px);pointer-events:none}
+.boot-inner{width:min(520px,100%);display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.boot-mark{position:absolute;top:-70px;left:50%;width:300px;height:300px;transform:translateX(-50%);pointer-events:none;opacity:.5}
+.boot-mark svg{width:100%;height:100%;fill:none;stroke:rgba(95,208,228,.35);stroke-width:.6;animation:spin 60s linear infinite}
+.boot-mark circle{fill:var(--cyan);stroke:none}
+.boot-word{font:200 clamp(44px,9vw,76px)/1 var(--sans);letter-spacing:.5em;padding-left:.5em;color:var(--text);animation:wordIn 1.2s var(--ease) both}
+@keyframes wordIn{from{letter-spacing:.9em;opacity:0}}
+.boot-sub{margin-top:14px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-3)}
+.boot-state{margin:40px 0 16px;font-size:13px;color:var(--cyan);letter-spacing:.14em;text-transform:uppercase}
+.boot-lines{list-style:none;margin:0;padding:0;width:100%;font-size:13px}
+.boot-lines li{display:flex;align-items:baseline;gap:10px;padding:4px 0;color:var(--text-3);transition:color .3s}
+.boot-lines .leader{flex:1;border-bottom:1px dotted var(--line-3);transform:translateY(-4px)}
+.boot-lines .st{width:70px;text-align:right;letter-spacing:.1em;text-transform:uppercase;font-size:11.5px}
+.boot-lines li.on{color:var(--text-2)}
+.boot-lines li.on .st{color:var(--cyan)}
+.boot-bar{display:grid;grid-template-columns:repeat(24,1fr) 48px;gap:3px;width:100%;margin-top:22px;height:10px;align-items:center}
+.boot-bar i{height:10px;background:var(--line);border-radius:1px;transition:background .15s}
+.boot-bar i.on{background:var(--cyan)}
+.boot-bar .num{font-size:12px;color:var(--text-2);text-align:right}
+.boot-foot{position:absolute;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:11px;color:var(--text-3);gap:12px}
+
+/* responsive */
+@media (max-width:1320px){
+  .tb-mission .tb-name{display:none}
+  .brand-sub{display:none}
+  .cmdk{min-width:0}
+}
+@media (max-width:1180px){
+  .shell{--sbw:64px}
+  .shell .nav-label,.shell .sb-event{opacity:0;pointer-events:none}
+  .shell .nav-flag{position:absolute;left:30px;top:10px}
+  .sb-toggle,.sb-collapse{display:none}
+  .s8,.s7,.s5,.s4{grid-column:span 12}
+  .tstrip{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .crew-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .comms-grid{grid-template-columns:minmax(0,1fr)}
+  .ch-list ul{display:flex;overflow-x:auto;gap:4px;scrollbar-width:none}
+  .ch-list .panel-head{display:none}
+  .ch{width:auto;white-space:nowrap}
+  .console{height:min(600px,calc(100dvh - 300px))}
+  .situation .sit-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .situation .sit-block{border-bottom:0;border-right:1px solid var(--line)}
+  .situation .sit-block:last-child{border-right:0}
+  .phases{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}
+  .hide-md{display:none!important}
+  .cmdk-text{display:none}
+}
+@media (max-width:760px){
+  :root{--top:52px}
+  .shell,.shell.collapsed{grid-template-columns:minmax(0,1fr);grid-template-rows:var(--top) minmax(0,1fr)}
+  .sidebar,.statusbar,.tb-mission,.tb-clocks>div:nth-child(2){display:none}
+  .main{grid-column:1;padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+  .topbar{gap:8px;padding:0 10px}
+  .brand-word{letter-spacing:.32em;font-size:14px}
+  .tb-clocks{padding-left:10px;gap:0}
+  .cmdk{width:32px;padding:0;justify-content:center;border-color:transparent;background:transparent}
+  .cmdk kbd{display:none}
+  .page{padding:18px 14px 28px;gap:14px}
+  .phead h1,.mission-head h1{font-size:26px}
+  .mh-facts{width:100%;display:grid;grid-template-columns:1fr 1fr;row-gap:12px}
+  .mh-facts>div{padding:0 12px 0 0;border-left:0}
+  .hide-sm{display:none!important}
+  .g{gap:14px}
+  .s6{grid-column:span 12}
+  .tstrip{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;margin:0 -14px;padding:0 14px;scrollbar-width:none}
+  .tstrip::-webkit-scrollbar{display:none}
+  .tstrip .tcard{flex:0 0 68%;scroll-snap-align:start}
+  .situation .sit-body{display:flex}
+  .situation .sit-block{border-right:0;border-bottom:1px solid var(--line)}
+  .omap{aspect-ratio:4/3.1}
+  .omap-legend .lg-note,.omap-readout{display:none}
+  .omap-tools{top:auto;bottom:8px;right:8px;left:8px;justify-content:space-between;flex-wrap:nowrap;overflow-x:auto}
+  .omap-tools .btn{width:34px;height:34px}
+  .omap-legend{top:8px;bottom:auto}
+  .omap-card{top:34px}
+  .crew-grid{grid-template-columns:minmax(0,1fr)}
+  .phases{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .chart-top{flex-direction:column;align-items:stretch}
+  .chart-now{flex-direction:row;align-items:baseline;justify-content:space-between}
+  .chart-panel .panel-head{flex-wrap:wrap;padding:10px 12px}
+  .panel-body{padding:14px}
+  .console{height:calc(100dvh - 240px);min-height:380px}
+  .char-n{display:none}
+  .compose-row input{padding-right:12px}
+  .compose-row .btn{padding:0 12px}
+  .search-box{min-width:0;width:100%}
+  .timeline::before{left:71px}
+  .tl-item{grid-template-columns:62px 22px minmax(0,1fr)}
+  .tl-node{margin-left:5px}
+  .toasts{bottom:calc(76px + env(safe-area-inset-bottom,0px));right:12px;width:calc(100vw - 24px)}
+  .bottomnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;padding:0 4px env(safe-area-inset-bottom,0px);background:rgba(4,8,16,.94);border-top:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .bottomnav a,.bottomnav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:60px;border:0;background:transparent;color:var(--text-3);font-size:10.5px;text-decoration:none;cursor:pointer;position:relative}
+  .bottomnav .active{color:var(--cyan)}
+  .bottomnav .active::before{content:"";position:absolute;top:0;left:30%;right:30%;height:2px;background:var(--cyan)}
+  .boot-foot{flex-direction:column-reverse;gap:10px}
+  .drawer-tools{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+  .omap::after{display:none}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+(function(){
+const {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useContext,
+  createContext,
+  memo
+} = React;
+const pad = (n, l = 2) => String(Math.floor(n)).padStart(l, '0');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmtUTC = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+const fmtUTCShort = d => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+const fmtNum = (v, dec = 0) => {
+  const s = Math.abs(v).toLocaleString('en-US', {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec
+  });
+  return (v < 0 && Number(s.replace(/,/g, '')) !== 0 ? '\u2212' : '') + s;
+};
+const fmtDur = ms => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${pad(s / 3600)}:${pad(s % 3600 / 60)}:${pad(s % 60)}`;
+};
+const fmtMET = ms => {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 86400)}d ${pad(s % 86400 / 3600)}:${pad(s % 3600 / 60)}:${pad(s % 60)}`;
+};
+const ago = ms => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s} s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  return `${Math.floor(m / 60)} h ${m % 60} min ago`;
+};
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = a + 0x6d2b79f5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function gauss(rng) {
+  const u = Math.max(1e-9, rng()),
+    v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+let _uid = 0;
+const uid = (p = 'id') => `${p}-${Date.now().toString(36)}-${(_uid++).toString(36)}`;
+const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+function useReducedMotion() {
+  const [r, setR] = useState(mq ? mq.matches : false);
+  useEffect(() => {
+    if (!mq) return;
+    const f = () => setR(mq.matches);
+    mq.addEventListener ? mq.addEventListener('change', f) : mq.addListener(f);
+    return () => mq.removeEventListener ? mq.removeEventListener('change', f) : mq.removeListener(f);
+  }, []);
+  return r;
+}
+function useWidth(initial = 640) {
+  const ref = useRef(null);
+  const [w, setW] = useState(initial);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setW(el.clientWidth || initial);
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+const T0 = Date.now();
+const LAUNCH_AT = T0 - (4 * 86400 + 6 * 3600 + 12 * 60 + 9) * 1000;
+const LOI_AT = T0 + (2 * 3600 + 14 * 60 + 33) * 1000;
+const MISSION = {
+  code: 'AE-07',
+  name: 'Orbital Frontier',
+  vehicle: 'AETHER-7',
+  station: 'Halden-34',
+  nextStation: 'Mirador-12',
+  loiDuration: 382,
+  loiDv: 873
+};
+const missionProgress = now => 78 + (now - T0) / 3.6e6 * 0.35;
+const PHASES = [{
+  id: 'launch',
+  name: 'Launch and ascent',
+  when: 'MET 0d 00:00',
+  state: 'done'
+}, {
+  id: 'leo',
+  name: 'Earth parking orbit',
+  when: 'MET 0d 00:12',
+  state: 'done'
+}, {
+  id: 'tli',
+  name: 'Translunar injection',
+  when: 'MET 0d 02:41',
+  state: 'done'
+}, {
+  id: 'coast',
+  name: 'Translunar coast',
+  when: 'MET 0d 02:48',
+  state: 'done'
+}, {
+  id: 'loi',
+  name: 'Lunar orbit insertion',
+  when: 'Approach',
+  state: 'current'
+}, {
+  id: 'science',
+  name: 'Science orbit',
+  when: 'After LOI + 2 trims',
+  state: 'next'
+}];
+const CIS = (() => {
+  const rp = 6.578,
+    ra = 400;
+  const a = (rp + ra) / 2,
+    e = (ra - rp) / (ra + rp);
+  return {
+    rp,
+    ra,
+    a,
+    e,
+    p: a * (1 - e * e),
+    moon: [384.4, 0],
+    earthR: 15,
+    moonR: 4.6,
+    unit: 1000
+  };
+})();
+const LUN = (() => {
+  const rp = 183.7,
+    ra = 473.7;
+  const a = (rp + ra) / 2,
+    e = (ra - rp) / (ra + rp);
+  const eh = 1.32;
+  return {
+    rp,
+    ra,
+    a,
+    e,
+    p: a * (1 - e * e),
+    eh,
+    ph: rp * (1 + eh),
+    R: 173.7,
+    unit: 10,
+    mu: 4902.8
+  };
+})();
+function conic(p, e, th) {
+  const r = p / (1 + e * Math.cos(th));
+  return [-r * Math.cos(th), -r * Math.sin(th)];
+}
+function craftCis(altKm) {
+  const r = (altKm + 6371) / 1000;
+  const c = (CIS.p / r - 1) / CIS.e;
+  const th = Math.acos(clamp(c, -1, 1));
+  return {
+    th,
+    pos: conic(CIS.p, CIS.e, th)
+  };
+}
+function moonGeometry(altKm) {
+  const {
+    pos
+  } = craftCis(altKm);
+  const dx = CIS.moon[0] - pos[0],
+    dy = CIS.moon[1] - pos[1];
+  const range = Math.hypot(dx, dy) * 1000;
+  const bearing = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  return {
+    range,
+    bearing
+  };
+}
+function lunarApproachTheta(now) {
+  const rem = clamp((LOI_AT - now) / (LOI_AT - T0), 0, 1);
+  return -(0.12 + 1.2 * rem);
+}
+function solveKepler(M, e) {
+  let E = M;
+  for (let i = 0; i < 6; i++) E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  return 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+}
+const METRIC_ORDER = ['altitude', 'velocity', 'fuel', 'signal', 'temperature', 'power'];
+const METRICS = {
+  altitude: {
+    label: 'Altitude',
+    unit: 'km',
+    dec: 0,
+    base: 370480,
+    drift: 1.4,
+    noise: 0.3,
+    revert: 0,
+    sub: 'Above Earth surface',
+    nominal: '0 to 410,000 km'
+  },
+  velocity: {
+    label: 'Velocity',
+    unit: 'km/h',
+    dec: 0,
+    base: 2948,
+    drift: 0.05,
+    noise: 0.8,
+    revert: 0,
+    sub: 'Earth-relative',
+    nominal: '1,000 to 4,500 km/h'
+  },
+  fuel: {
+    label: 'Fuel',
+    unit: '%',
+    dec: 1,
+    base: 73.4,
+    drift: -0.0002,
+    noise: 0.0015,
+    revert: 0,
+    warn: {
+      below: 25
+    },
+    sub: 'Propellant remaining',
+    nominal: 'Above 25 %'
+  },
+  signal: {
+    label: 'Signal',
+    unit: '%',
+    dec: 1,
+    base: 98.2,
+    drift: 0,
+    noise: 0.14,
+    revert: 0.18,
+    warn: {
+      below: 90
+    },
+    sub: 'Ka-band lock quality',
+    nominal: 'Above 90 %'
+  },
+  temperature: {
+    label: 'Temperature',
+    unit: '°C',
+    dec: 1,
+    base: -42,
+    drift: 0,
+    noise: 0.16,
+    revert: 0.1,
+    warn: {
+      above: -20
+    },
+    sub: 'External hull array',
+    nominal: '\u221280 to \u221220 °C'
+  },
+  power: {
+    label: 'Power',
+    unit: '%',
+    dec: 1,
+    base: 86.7,
+    drift: 0,
+    noise: 0.08,
+    revert: 0.12,
+    warn: {
+      below: 60
+    },
+    sub: 'Bus capacity',
+    nominal: 'Above 60 %'
+  }
+};
+const RANGES = [{
+  id: '5m',
+  label: '5 min',
+  ms: 3e5
+}, {
+  id: '15m',
+  label: '15 min',
+  ms: 9e5
+}, {
+  id: '1h',
+  label: '1 hr',
+  ms: 36e5
+}, {
+  id: '6h',
+  label: '6 hr',
+  ms: 216e5
+}];
+const FINE_N = 1800;
+const COARSE_N = 720;
+const TICK_MS = 2000;
+function metricStatus(k, v) {
+  const w = METRICS[k].warn;
+  if (w && (w.below != null && v < w.below || w.above != null && v > w.above)) return {
+    cls: 'warn',
+    label: 'Caution'
+  };
+  return {
+    cls: 'ok',
+    label: 'Nominal'
+  };
+}
+function capPct(k, v) {
+  return METRICS[k].unit === '%' ? Math.min(100, v) : v;
+}
+function initTelemetry() {
+  const rng = mulberry32(7);
+  const now = Date.now();
+  const values = {},
+    prev = {},
+    fine = {},
+    coarse = {};
+  METRIC_ORDER.forEach(k => {
+    const m = METRICS[k];
+    let v = m.base;
+    const f = new Array(FINE_N);
+    for (let i = FINE_N - 1; i >= 0; i--) {
+      f[i] = {
+        t: now - (FINE_N - 1 - i) * TICK_MS,
+        v: capPct(k, v)
+      };
+      v = v - m.drift + m.noise * gauss(rng) + m.revert * (m.base - v);
+    }
+    v = m.base;
+    const c = new Array(COARSE_N);
+    for (let i = COARSE_N - 1; i >= 0; i--) {
+      c[i] = {
+        t: now - (COARSE_N - 1 - i) * 30000,
+        v: capPct(k, v)
+      };
+      v = v - m.drift * 15 + m.noise * 2.2 * gauss(rng) + Math.min(0.8, m.revert * 5) * (m.base - v);
+    }
+    fine[k] = f;
+    coarse[k] = c;
+    values[k] = m.base;
+    prev[k] = m.base;
+  });
+  return {
+    rng,
+    values,
+    prev,
+    fine,
+    coarse,
+    tick: 0
+  };
+}
+function stepTelemetry(s) {
+  s.tick++;
+  const now = Date.now();
+  METRIC_ORDER.forEach(k => {
+    const m = METRICS[k];
+    const v0 = s.values[k];
+    const v = capPct(k, v0 + m.drift + m.noise * gauss(s.rng) + m.revert * (m.base - v0));
+    s.prev[k] = v0;
+    s.values[k] = v;
+    s.fine[k].push({
+      t: now,
+      v
+    });
+    if (s.fine[k].length > FINE_N) s.fine[k].shift();
+    if (s.tick % 15 === 0) {
+      s.coarse[k].push({
+        t: now,
+        v
+      });
+      if (s.coarse[k].length > COARSE_N) s.coarse[k].shift();
+    }
+  });
+}
+function downsample(pts, max) {
+  if (pts.length <= max) return pts;
+  const k = pts.length / max;
+  const out = [];
+  for (let i = 0; i < max - 1; i++) out.push(pts[Math.floor(i * k)]);
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function getSeries(s, k, range) {
+  const now = Date.now();
+  const src = range.id === '6h' ? s.coarse[k].concat([{
+    t: now,
+    v: s.values[k]
+  }]) : s.fine[k];
+  const cutoff = now - range.ms;
+  return downsample(src.filter(p => p.t >= cutoff), 180);
+}
+const SUBSYSTEMS_SEED = [{
+  id: 'propulsion',
+  name: 'Propulsion',
+  status: 'nominal',
+  health: 97.8,
+  temp: 284,
+  power: 0.42,
+  checked: 18,
+  desc: 'Main engine and reaction control. Armed for lunar orbit insertion.',
+  metrics: [['Thrust availability', '98.4 %'], ['Chamber pressure', '1.02 MPa'], ['Oxidizer remaining', '72.9 %'], ['Burns completed', '6 of 8']]
+}, {
+  id: 'navigation',
+  name: 'Navigation',
+  status: 'nominal',
+  health: 99.1,
+  temp: 21.4,
+  power: 0.18,
+  checked: 9,
+  desc: 'Star trackers, inertial units and optical navigation camera.',
+  metrics: [['Star trackers', '2 of 2 locked'], ['Attitude error', '0.004°'], ['IMU drift', '0.0021 °/h'], ['Last optical fix', 'Image 1142']]
+}, {
+  id: 'comms',
+  name: 'Communications',
+  status: 'nominal',
+  health: 98.2,
+  temp: 34.8,
+  power: 0.61,
+  checked: 12,
+  desc: 'High-gain Ka-band antenna with X-band backup.',
+  metrics: [['Downlink', '2.4 Mbps'], ['Uplink', '256 kbps'], ['One-way light time', '1.26 s'], ['Bands', 'Ka primary, X backup']]
+}, {
+  id: 'power',
+  name: 'Power',
+  status: 'nominal',
+  health: 96.4,
+  temp: 18.2,
+  power: -6.8,
+  checked: 26,
+  desc: 'Twin solar arrays, lithium-ion battery bank and main bus.',
+  metrics: [['Array output', '6.8 kW'], ['Battery charge', '91 %'], ['Bus voltage', '120.2 V'], ['Array sun angle', '2.1°']]
+}, {
+  id: 'thermal',
+  name: 'Thermal',
+  status: 'warning',
+  health: 81.3,
+  temp: 38.6,
+  power: 0.34,
+  checked: 52,
+  desc: 'Radiator loops A and B, heaters and louvres.',
+  metrics: [['Loop A', '24.1 °C'], ['Loop B', '38.6 °C of 40.0 limit'], ['Loop B flow', '112 %'], ['Heater zones on', '4 of 11']]
+}, {
+  id: 'lifesupport',
+  name: 'Life support',
+  status: 'nominal',
+  health: 99.4,
+  temp: 22.1,
+  power: 0.88,
+  checked: 6,
+  desc: 'Cabin atmosphere, water recovery and CO\u2082 removal.',
+  metrics: [['Cabin pressure', '101.2 kPa'], ['Oxygen', '20.9 %'], ['CO\u2082 partial pressure', '0.31 kPa'], ['Humidity', '46 %']]
+}, {
+  id: 'payload',
+  name: 'Payload',
+  status: 'standby',
+  health: 97.0,
+  temp: -8.4,
+  power: 0.09,
+  checked: 41,
+  desc: 'Lunar mapping camera and gamma-ray spectrometer, held for science orbit.',
+  metrics: [['Lunar mapper', 'Standby, survival heat'], ['Spectrometer', 'Calibrated'], ['Data stored', '412 GB'], ['First science pass', 'LOI + 26 h']]
+}];
+const STATUS_META = {
+  nominal: {
+    label: 'Nominal',
+    cls: 'ok'
+  },
+  warning: {
+    label: 'Caution',
+    cls: 'warn'
+  },
+  critical: {
+    label: 'Critical',
+    cls: 'crit'
+  },
+  standby: {
+    label: 'Standby',
+    cls: 'idle'
+  }
+};
+const LOG_CATS = {
+  navigation: {
+    label: 'Navigation'
+  },
+  telemetry: {
+    label: 'Telemetry'
+  },
+  communication: {
+    label: 'Communication'
+  },
+  system: {
+    label: 'System'
+  },
+  alert: {
+    label: 'Alert'
+  }
+};
+function seedLogs() {
+  const now = Date.now();
+  const L = [[0.4, 'navigation', 'Orbital correction completed', 'TCM-4 burn 12.4 s, \u0394v 1.82 m/s. Residuals within 0.3 sigma.'], [3.6, 'telemetry', 'Telemetry synchronized', 'All 1,284 channels aligned to ground epoch.'], [20, 'communication', 'Communication window opened', 'Halden-34 acquired signal. Ka-band downlink at 2.4 Mbps.'], [40, 'navigation', 'Navigation calibration complete', 'Star tracker alignment updated. Attitude error 0.004°.'], [52, 'alert', 'Thermal loop B approaching threshold', 'Radiator loop B at 38.6 °C against a 40.0 °C limit.'], [74, 'system', 'Payload heaters cycled', 'Lunar mapper held at survival temperature.'], [95, 'system', 'Lunar orbit insertion burn scheduled', 'Main engine, 382 s, \u0394v 873 m/s.'], [128, 'communication', 'Crew private conference ended', ''], [166, 'system', 'Power bus B load rebalanced', 'Galley and payload heaters moved to bus A.'], [210, 'telemetry', 'High-rate telemetry mode ended', 'Returned to 1 Hz housekeeping rate.'], [262, 'navigation', 'Trajectory correction 4 planned', 'Burn uplinked for crew review.'], [340, 'system', 'Crew sleep period ended', ''], [470, 'communication', 'Daily planning conference', 'Flight plan revision C accepted.']];
+  return L.map(([m, cat, title, detail], i) => ({
+    id: 'log-' + i,
+    t: now - m * 60000,
+    cat,
+    title,
+    detail
+  }));
+}
+function seedAlerts() {
+  const now = Date.now();
+  return [{
+    id: 'al-1',
+    level: 'warning',
+    title: 'Thermal subsystem approaching threshold',
+    detail: 'Radiator loop B at 38.6 °C, limit 40.0 °C. Flow increased to 112 %.',
+    t: now - 52 * 60000,
+    read: false,
+    system: 'thermal'
+  }, {
+    id: 'al-2',
+    level: 'info',
+    title: 'Communication window open',
+    detail: 'Halden-34 tracking pass ends in 3 h 12 min.',
+    t: now - 20 * 60000,
+    read: false
+  }, {
+    id: 'al-3',
+    level: 'info',
+    title: 'Lunar orbit insertion burn scheduled',
+    detail: 'Main engine burn 382 s, \u0394v 873 m/s.',
+    t: now - 95 * 60000,
+    read: true
+  }];
+}
+const ALERT_POOL = [{
+  delay: 75,
+  level: 'info',
+  title: 'Ground station handover prepared',
+  detail: 'Halden-34 to Mirador-12 at the next pass boundary.'
+}, {
+  delay: 180,
+  level: 'warning',
+  title: 'Signal margin reduced',
+  detail: 'High-gain antenna slewing to LOI attitude. Link margin 2.1 dB for about 4 minutes.',
+  system: 'comms'
+}, {
+  delay: 320,
+  level: 'info',
+  title: 'Star tracker 2 reacquired lock',
+  detail: 'Brief occultation by the lunar limb has cleared.',
+  system: 'navigation'
+}, {
+  delay: 480,
+  level: 'critical',
+  title: 'Reaction wheel 3 current spike',
+  detail: 'Wheel 3 drew 2.4 A for 0.8 s and was isolated automatically. Attitude held on remaining wheels.',
+  system: 'navigation'
+}];
+const CHANNELS = {
+  control: {
+    label: 'Mission Control',
+    short: 'CTRL'
+  },
+  craft: {
+    label: 'AETHER-7',
+    short: 'AE-7'
+  },
+  ground: {
+    label: 'Ground station',
+    short: 'GND'
+  },
+  auto: {
+    label: 'Autonomous system',
+    short: 'AUTO'
+  }
+};
+function seedMessages() {
+  const now = Date.now();
+  const M = [[6.3, 'control', 'Trajectory correction confirmed. Good burn, AETHER.'], [6.1, 'craft', 'Copy. Navigation systems nominal, residuals 0.3 sigma.'], [5.0, 'ground', 'Halden-34 tracking. Ka-band lock, 2.4 megabit downlink.'], [3.3, 'auto', 'Thermal manager: loop B flow increased to 112 percent.'], [2.1, 'control', 'AETHER, confirm cabin configuration for LOI at your convenience.'], [1.4, 'craft', 'Cabin configured. Crew seated by T minus 30.']];
+  return M.map(([m, src, text], i) => ({
+    id: 'msg-' + i,
+    t: now - m * 60000,
+    src,
+    text
+  }));
+}
+const INCOMING_POOL = [['ground', 'Range and range-rate nominal. Doppler residuals under 0.1 Hz.'], ['auto', 'Onboard navigation updated state vector from optical image 1143.'], ['craft', 'Mission Control, AETHER. Payload bay door indicator shows closed and latched.'], ['control', 'AETHER, Flight. You are go for LOI configuration at T minus 45.'], ['auto', 'Power manager trimmed array 2 gimbal 0.4° for sun pointing.'], ['ground', 'Mirador-12 standing by for handover.'], ['craft', 'Guidance display matches the ground solution. Commander Sen concurs.']];
+const ACKS = ['Copy, Mission Control.', 'AETHER copies all.', 'Copy. Will advise when complete.', 'Understood. Proceeding.'];
+const CREW = [{
+  id: 'sen',
+  name: 'Aria Sen',
+  initials: 'AS',
+  role: 'Commander',
+  position: 'Mission command',
+  status: 'active',
+  task: 'Navigation calibration',
+  hue: 188,
+  hr: 64,
+  shift: 220,
+  tasks: [['Crew brief', 'done'], ['Navigation calibration', 'now'], ['LOI checklist review', 'next']]
+}, {
+  id: 'vale',
+  name: 'Dmitri Vale',
+  initials: 'DV',
+  role: 'Pilot',
+  position: 'Flight dynamics',
+  status: 'active',
+  task: 'LOI burn rehearsal',
+  hue: 212,
+  hr: 71,
+  shift: 205,
+  tasks: [['Attitude timeline check', 'done'], ['LOI burn rehearsal', 'now'], ['Manual takeover drill', 'next']]
+}, {
+  id: 'haddad',
+  name: 'Leila Haddad',
+  initials: 'LH',
+  role: 'Mission specialist',
+  position: 'Payload and science',
+  status: 'standby',
+  task: 'Lunar mapper warm-up plan',
+  hue: 168,
+  hr: 58,
+  shift: 310,
+  tasks: [['Spectrometer calibration', 'done'], ['Mapper warm-up plan', 'now'], ['First light targets', 'next']]
+}, {
+  id: 'aoyama',
+  name: 'Kenji Aoyama',
+  initials: 'KA',
+  role: 'Flight engineer',
+  position: 'Vehicle systems',
+  status: 'rest',
+  task: 'Rest cycle',
+  hue: 228,
+  hr: 52,
+  shift: 95,
+  tasks: [['Thermal loop B review', 'done'], ['Rest cycle', 'now'], ['Pre-burn systems check', 'next']]
+}];
+const CREW_STATUS = {
+  active: {
+    label: 'Active',
+    cls: 'ok'
+  },
+  standby: {
+    label: 'Standby',
+    cls: 'info'
+  },
+  rest: {
+    label: 'Rest cycle',
+    cls: 'idle'
+  }
+};
+const TimeCtx = createContext(Date.now());
+function TimeProvider({
+  children
+}) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return React.createElement(TimeCtx.Provider, {
+    value: now
+  }, children);
+}
+const useNow = () => useContext(TimeCtx);
+const TelemetryCtx = createContext(null);
+function TelemetryProvider({
+  children
+}) {
+  const store = useRef(null);
+  if (!store.current) store.current = initTelemetry();
+  const [snap, setSnap] = useState(() => ({
+    values: {
+      ...store.current.values
+    },
+    prev: {
+      ...store.current.prev
+    },
+    tick: 0
+  }));
+  useEffect(() => {
+    const id = setInterval(() => {
+      stepTelemetry(store.current);
+      setSnap({
+        values: {
+          ...store.current.values
+        },
+        prev: {
+          ...store.current.prev
+        },
+        tick: store.current.tick
+      });
+    }, TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  const value = useMemo(() => ({
+    ...snap,
+    buffers: store.current
+  }), [snap]);
+  return React.createElement(TelemetryCtx.Provider, {
+    value: value
+  }, children);
+}
+const useTelemetry = () => useContext(TelemetryCtx);
+const MissionCtx = createContext(null);
+function MissionProvider({
+  active,
+  children
+}) {
+  const [logs, setLogs] = useState(seedLogs);
+  const [alerts, setAlerts] = useState(seedAlerts);
+  const [messages, setMessages] = useState(seedMessages);
+  const [subs, setSubs] = useState(() => {
+    const now = Date.now();
+    const o = {};
+    SUBSYSTEMS_SEED.forEach(s => o[s.id] = {
+      ...s,
+      checkedAt: now - s.checked * 60000,
+      running: false
+    });
+    return o;
+  });
+  const [selectedSub, setSelectedSub] = useState('propulsion');
+  const [toasts, setToasts] = useState([]);
+  const timers = useRef([]);
+  const later = useCallback((fn, ms) => {
+    const id = setTimeout(fn, ms);
+    timers.current.push(id);
+    return id;
+  }, []);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const addLog = useCallback((cat, title, detail = '') => {
+    setLogs(l => [{
+      id: uid('log'),
+      t: Date.now(),
+      cat,
+      title,
+      detail
+    }, ...l]);
+  }, []);
+  const dismissToast = useCallback(id => setToasts(t => t.filter(x => x.id !== id)), []);
+  const toast = useCallback(t => {
+    const id = uid('toast');
+    setToasts(prev => [...prev.slice(-2), {
+      ...t,
+      id
+    }]);
+    later(() => dismissToast(id), t.level === 'critical' ? 9000 : 6000);
+  }, [later, dismissToast]);
+  const pushAlert = useCallback(a => {
+    const al = {
+      ...a,
+      id: uid('al'),
+      t: Date.now(),
+      read: false
+    };
+    setAlerts(prev => [al, ...prev]);
+    addLog('alert', a.title, a.detail);
+    if (a.level !== 'info') toast({
+      level: a.level,
+      title: a.title,
+      detail: a.detail,
+      kind: 'alert'
+    });
+  }, [addLog, toast]);
+  const alertActions = useMemo(() => ({
+    markRead: id => setAlerts(p => p.map(a => a.id === id ? {
+      ...a,
+      read: true
+    } : a)),
+    dismiss: id => setAlerts(p => p.filter(a => a.id !== id)),
+    markAllRead: () => setAlerts(p => p.map(a => ({
+      ...a,
+      read: true
+    })))
+  }), []);
+  useEffect(() => {
+    if (!active) return;
+    const ids = ALERT_POOL.map(a => setTimeout(() => pushAlert(a), a.delay * 1000));
+    return () => ids.forEach(clearTimeout);
+  }, [active, pushAlert]);
+  useEffect(() => {
+    if (!active) return;
+    let i = 0,
+      id;
+    const schedule = () => {
+      id = setTimeout(() => {
+        const [src, text] = INCOMING_POOL[i++ % INCOMING_POOL.length];
+        setMessages(m => [...m, {
+          id: uid('msg'),
+          t: Date.now(),
+          src,
+          text
+        }].slice(-120));
+        schedule();
+      }, 24000 + Math.random() * 14000);
+    };
+    schedule();
+    return () => clearTimeout(id);
+  }, [active]);
+  const ackIdx = useRef(0);
+  const sendMessage = useCallback(text => {
+    const id = uid('msg');
+    setMessages(m => [...m, {
+      id,
+      t: Date.now(),
+      src: 'control',
+      text,
+      own: true,
+      status: 'uplink'
+    }]);
+    later(() => {
+      setMessages(m => m.map(x => x.id === id ? {
+        ...x,
+        status: 'delivered'
+      } : x));
+      addLog('communication', 'Uplink delivered', text.length > 80 ? text.slice(0, 79) + '\u2026' : text);
+    }, 1280);
+    later(() => {
+      const ack = ACKS[ackIdx.current++ % ACKS.length];
+      setMessages(m => [...m, {
+        id: uid('msg'),
+        t: Date.now(),
+        src: 'craft',
+        text: ack
+      }]);
+    }, 3000);
+  }, [later, addLog]);
+  const runDiagnostic = useCallback(sid => {
+    setSubs(s => ({
+      ...s,
+      [sid]: {
+        ...s[sid],
+        running: true
+      }
+    }));
+    later(() => {
+      setSubs(s => {
+        const cur = s[sid];
+        const health = sid === 'thermal' ? Math.min(86, cur.health + 1.6) : Math.min(99.9, cur.health + 0.3);
+        return {
+          ...s,
+          [sid]: {
+            ...cur,
+            running: false,
+            checkedAt: Date.now(),
+            health
+          }
+        };
+      });
+      const name = SUBSYSTEMS_SEED.find(x => x.id === sid).name;
+      const stillWarn = sid === 'thermal';
+      addLog('system', `${name} diagnostic complete`, stillWarn ? 'Loop B 38.1 °C. Caution remains until the burn attitude is reached.' : 'All checks passed.');
+      toast({
+        level: stillWarn ? 'warning' : 'info',
+        title: `${name} diagnostic complete`,
+        detail: stillWarn ? 'Caution remains on loop B.' : 'All checks passed.'
+      });
+    }, 1900);
+  }, [later, addLog, toast]);
+  const value = useMemo(() => ({
+    logs,
+    addLog,
+    alerts,
+    alertActions,
+    messages,
+    sendMessage,
+    subs,
+    runDiagnostic,
+    selectedSub,
+    setSelectedSub,
+    toasts,
+    dismissToast
+  }), [logs, addLog, alerts, alertActions, messages, sendMessage, subs, runDiagnostic, selectedSub, toasts, dismissToast]);
+  return React.createElement(MissionCtx.Provider, {
+    value: value
+  }, children);
+}
+const useMission = () => useContext(MissionCtx);
+const ICONS = {
+  overview: React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "3",
+    y: "3",
+    width: "7",
+    height: "7",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "14",
+    y: "3",
+    width: "7",
+    height: "7",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "14",
+    y: "14",
+    width: "7",
+    height: "7",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "3",
+    y: "14",
+    width: "7",
+    height: "7",
+    rx: "1"
+  })),
+  orbit: React.createElement(React.Fragment, null, React.createElement("ellipse", {
+    cx: "12",
+    cy: "12",
+    rx: "10",
+    ry: "4.5",
+    transform: "rotate(-24 12 12)"
+  }), React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "2.6"
+  }), React.createElement("circle", {
+    cx: "20.2",
+    cy: "8.4",
+    r: "1.2",
+    fill: "currentColor",
+    stroke: "none"
+  })),
+  craft: React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "9",
+    y: "8",
+    width: "6",
+    height: "8",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "2",
+    y: "9.5",
+    width: "5",
+    height: "5"
+  }), React.createElement("rect", {
+    x: "17",
+    y: "9.5",
+    width: "5",
+    height: "5"
+  }), React.createElement("path", {
+    d: "M7 12h2M15 12h2M12 8V5M10.5 4h3"
+  })),
+  activity: React.createElement("path", {
+    d: "M22 12h-4l-3 9L9 3l-3 9H2"
+  }),
+  users: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+  }), React.createElement("circle", {
+    cx: "9",
+    cy: "7",
+    r: "4"
+  }), React.createElement("path", {
+    d: "M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+  })),
+  radio: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "2"
+  }), React.createElement("path", {
+    d: "M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"
+  })),
+  list: React.createElement("path", {
+    d: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+  }),
+  bell: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"
+  }), React.createElement("path", {
+    d: "M10.3 21a1.94 1.94 0 0 0 3.4 0"
+  })),
+  search: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "11",
+    cy: "11",
+    r: "7.5"
+  }), React.createElement("path", {
+    d: "m21 21-4.6-4.6"
+  })),
+  x: React.createElement("path", {
+    d: "M18 6 6 18M6 6l12 12"
+  }),
+  plus: React.createElement("path", {
+    d: "M12 5v14M5 12h14"
+  }),
+  minus: React.createElement("path", {
+    d: "M5 12h14"
+  }),
+  rotcw: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+  }), React.createElement("path", {
+    d: "M21 3v5h-5"
+  })),
+  rotccw: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+  }), React.createElement("path", {
+    d: "M3 3v5h5"
+  })),
+  target: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9"
+  }), React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "3"
+  }), React.createElement("path", {
+    d: "M12 1v4M12 19v4M1 12h4M19 12h4"
+  })),
+  fit: React.createElement("path", {
+    d: "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+  }),
+  route: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "6",
+    cy: "19",
+    r: "2.5"
+  }), React.createElement("path", {
+    d: "M8.5 19h8a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H15"
+  }), React.createElement("circle", {
+    cx: "18",
+    cy: "5",
+    r: "2.5"
+  })),
+  label: React.createElement("path", {
+    d: "M4 7V4h16v3M9 20h6M12 4v16"
+  }),
+  grid: React.createElement("path", {
+    d: "M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"
+  }),
+  send: React.createElement("path", {
+    d: "M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"
+  }),
+  check: React.createElement("path", {
+    d: "M20 6 9 17l-5-5"
+  }),
+  menu: React.createElement("path", {
+    d: "M4 6h16M4 12h16M4 18h16"
+  }),
+  more: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "5",
+    cy: "12",
+    r: "1.3",
+    fill: "currentColor"
+  }), React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "1.3",
+    fill: "currentColor"
+  }), React.createElement("circle", {
+    cx: "19",
+    cy: "12",
+    r: "1.3",
+    fill: "currentColor"
+  })),
+  warn: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+  }), React.createElement("path", {
+    d: "M12 9v4M12 17h.01"
+  })),
+  info: React.createElement(React.Fragment, null, React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9.5"
+  }), React.createElement("path", {
+    d: "M12 16v-4M12 8h.01"
+  })),
+  crit: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86z"
+  }), React.createElement("path", {
+    d: "M12 8v4M12 16h.01"
+  })),
+  panel: React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "3",
+    y: "3",
+    width: "18",
+    height: "18",
+    rx: "2"
+  }), React.createElement("path", {
+    d: "M9 3v18M15.5 9.5 13 12l2.5 2.5"
+  })),
+  play: React.createElement("path", {
+    d: "M7 4.5v15l12-7.5z"
+  }),
+  chevron: React.createElement("path", {
+    d: "m9 18 6-6-6-6"
+  }),
+  pulse: React.createElement("path", {
+    d: "M3 12h4l2-5 4 10 2-5h6"
+  }),
+  note: React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M12 20h9"
+  }), React.createElement("path", {
+    d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"
+  }))
+};
+function Icon({
+  name,
+  size = 18,
+  className = '',
+  ...rest
+}) {
+  return React.createElement("svg", {
+    className: 'icon ' + className,
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.6",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true",
+    focusable: "false",
+    ...rest
+  }, ICONS[name]);
+}
+function AnimatedNumber({
+  value,
+  dec = 0,
+  className = 'num'
+}) {
+  const reduced = useReducedMotion();
+  const [disp, setDisp] = useState(value);
+  const cur = useRef(value);
+  const raf = useRef(0);
+  useEffect(() => {
+    if (reduced) {
+      cur.current = value;
+      setDisp(value);
+      return;
+    }
+    const from = cur.current,
+      to = value,
+      t0 = performance.now(),
+      D = 700;
+    cancelAnimationFrame(raf.current);
+    const step = t => {
+      const k = Math.min(1, (t - t0) / D);
+      const e = 1 - Math.pow(1 - k, 3);
+      cur.current = from + (to - from) * e;
+      setDisp(cur.current);
+      if (k < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf.current);
+  }, [value, reduced]);
+  return React.createElement("span", {
+    className: className
+  }, fmtNum(disp, dec));
+}
+function StatusDot({
+  cls,
+  pulse
+}) {
+  return React.createElement("span", {
+    className: `dot ${cls}${pulse ? ' pulse' : ''}`,
+    "aria-hidden": "true"
+  });
+}
+function StatusPill({
+  cls,
+  children
+}) {
+  return React.createElement("span", {
+    className: 'pill ' + cls
+  }, React.createElement(StatusDot, {
+    cls: cls
+  }), children);
+}
+function Sparkline({
+  data,
+  w = 120,
+  h = 28
+}) {
+  if (!data || data.length < 2) return null;
+  let lo = Infinity,
+    hi = -Infinity;
+  for (const v of data) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  if (hi - lo < 1e-9) {
+    hi += 1;
+    lo -= 1;
+  }
+  const d = data.map((v, i) => `${i ? 'L' : 'M'}${(i / (data.length - 1) * w).toFixed(1)} ${(h - 2 - (v - lo) / (hi - lo) * (h - 4)).toFixed(1)}`).join('');
+  return React.createElement("svg", {
+    className: "spark",
+    viewBox: `0 0 ${w} ${h}`,
+    preserveAspectRatio: "none",
+    "aria-hidden": "true"
+  }, React.createElement("path", {
+    d: d
+  }));
+}
+function Panel({
+  title,
+  aside,
+  className = '',
+  instrument,
+  children,
+  bodyClass = '',
+  id,
+  as: Tag = 'section',
+  labelledBy
+}) {
+  const hid = useMemo(() => uid('ph'), []);
+  return React.createElement(Tag, {
+    className: `panel${instrument ? ' instrument' : ''} ${className}`,
+    "aria-labelledby": title ? hid : labelledBy,
+    id: id
+  }, (title || aside) && React.createElement("div", {
+    className: "panel-head"
+  }, title && React.createElement("h2", {
+    className: "label",
+    id: hid
+  }, title), aside && React.createElement("div", {
+    className: "panel-aside"
+  }, aside)), React.createElement("div", {
+    className: 'panel-body ' + bodyClass
+  }, children));
+}
+function Segmented({
+  options,
+  value,
+  onChange,
+  label,
+  size
+}) {
+  return React.createElement("div", {
+    className: 'seg' + (size ? ' seg-' + size : ''),
+    role: "group",
+    "aria-label": label
+  }, options.map(o => React.createElement("button", {
+    key: o.id,
+    type: "button",
+    "aria-pressed": value === o.id,
+    onClick: () => onChange(o.id)
+  }, o.label)));
+}
+function PageHead({
+  title,
+  desc,
+  children
+}) {
+  return React.createElement("header", {
+    className: "phead"
+  }, React.createElement("div", {
+    className: "phead-main"
+  }, React.createElement("h1", {
+    tabIndex: -1
+  }, title), desc && React.createElement("p", null, desc)), children && React.createElement("div", {
+    className: "phead-aside"
+  }, children));
+}
+const Starfield = memo(function Starfield() {
+  const ref = useRef(null);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    const c = ref.current;
+    const ctx = c && c.getContext ? c.getContext('2d') : null;
+    if (!ctx) return;
+    let w = 0,
+      h = 0,
+      stars = [],
+      raf = 0,
+      last = performance.now();
+    let shoot = null,
+      nextShoot = performance.now() + 8000 + Math.random() * 10000;
+    const rnd = Math.random;
+    const draw = (dt, t) => {
+      ctx.clearRect(0, 0, w, h);
+      for (const s of stars) {
+        s.x -= s.s * dt;
+        if (s.x < -2) s.x = w + 2;
+        s.tw += dt * s.tws;
+        ctx.globalAlpha = s.a * (0.82 + 0.18 * Math.sin(s.tw));
+        ctx.fillStyle = s.blue ? '#BFE6FF' : '#E8EEF7';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, 6.2832);
+        ctx.fill();
+      }
+      if (!reduced) {
+        if (!shoot && t > nextShoot) {
+          const ang = Math.PI * (0.78 + rnd() * 0.12);
+          shoot = {
+            x: w * (0.35 + rnd() * 0.6),
+            y: h * rnd() * 0.35,
+            vx: Math.cos(ang) * 620,
+            vy: Math.sin(ang) * 620 * -1 * -1,
+            age: 0,
+            life: 0.9
+          };
+          shoot.vy = Math.abs(Math.sin(ang) * 620) * 0.55;
+          nextShoot = t + 14000 + rnd() * 16000;
+        }
+        if (shoot) {
+          shoot.age += dt;
+          shoot.x += shoot.vx * dt;
+          shoot.y += shoot.vy * dt;
+          const k = shoot.age / shoot.life;
+          const a = Math.sin(Math.PI * Math.min(1, k)) * 0.55;
+          const len = 110;
+          const nx = -shoot.vx,
+            ny = -shoot.vy,
+            nl = Math.hypot(nx, ny);
+          const g = ctx.createLinearGradient(shoot.x, shoot.y, shoot.x + nx / nl * len, shoot.y + ny / nl * len);
+          g.addColorStop(0, `rgba(220,240,255,${a})`);
+          g.addColorStop(1, 'rgba(220,240,255,0)');
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = g;
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(shoot.x, shoot.y);
+          ctx.lineTo(shoot.x + nx / nl * len, shoot.y + ny / nl * len);
+          ctx.stroke();
+          if (k >= 1) shoot = null;
+        }
+      }
+      ctx.globalAlpha = 1;
+    };
+    const resize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = c.clientWidth;
+      h = c.clientHeight;
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const n = Math.round(w * h / 5200);
+      stars = [];
+      for (let i = 0; i < n; i++) {
+        const L = rnd() < 0.64 ? 0 : rnd() < 0.78 ? 1 : 2;
+        stars.push({
+          x: rnd() * w,
+          y: rnd() * h,
+          r: [0.5, 0.8, 1.2][L] * (0.75 + rnd() * 0.5),
+          a: [0.3, 0.5, 0.8][L] * (0.6 + rnd() * 0.4),
+          s: [1.5, 4, 8][L],
+          tw: rnd() * 6.28,
+          tws: 0.4 + rnd() * 0.9,
+          blue: rnd() < 0.14
+        });
+      }
+      draw(0, performance.now());
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    if (!reduced) {
+      const loop = t => {
+        const dt = Math.min(0.05, (t - last) / 1000);
+        last = t;
+        if (!document.hidden) draw(dt, t);
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, [reduced]);
+  return React.createElement("canvas", {
+    ref: ref,
+    className: "starfield",
+    "aria-hidden": "true"
+  });
+});
+function trendLabel(k, hist, value) {
+  if (hist.length < 31) return 'Steady';
+  const d = value - hist[hist.length - 31];
+  const m = METRICS[k];
+  const thr = m.dec ? 0.05 : 0.5;
+  if (Math.abs(d) < thr) return 'Steady';
+  return `${d > 0 ? '+' : '\u2212'}${fmtNum(Math.abs(d), m.dec)} ${m.unit} per min`;
+}
+const TelemetryCard = memo(function TelemetryCard({
+  k,
+  value,
+  hist,
+  selected,
+  onSelect
+}) {
+  const m = METRICS[k];
+  const st = metricStatus(k, value);
+  return React.createElement("button", {
+    type: "button",
+    className: 'tcard ' + st.cls,
+    "aria-pressed": !!selected,
+    onClick: () => onSelect && onSelect(k),
+    "aria-label": `${m.label}: ${fmtNum(value, m.dec)} ${m.unit}. ${st.label}. Show on chart`
+  }, React.createElement("span", {
+    className: "tc-top"
+  }, React.createElement("span", {
+    className: "label"
+  }, m.label), React.createElement(StatusDot, {
+    cls: st.cls
+  })), React.createElement("span", {
+    className: "tc-val"
+  }, React.createElement(AnimatedNumber, {
+    value: value,
+    dec: m.dec,
+    className: "num"
+  }), React.createElement("span", {
+    className: "unit"
+  }, m.unit)), React.createElement("span", {
+    className: "tc-sub"
+  }, m.sub), React.createElement("span", {
+    className: "tc-foot"
+  }, React.createElement("span", {
+    className: "tc-trend num"
+  }, trendLabel(k, hist, value)), React.createElement(Sparkline, {
+    data: hist.slice(-60)
+  })));
+});
+function TelemetryStrip({
+  selected,
+  onSelect
+}) {
+  const {
+    values,
+    buffers,
+    tick
+  } = useTelemetry();
+  const hists = useMemo(() => {
+    const o = {};
+    METRIC_ORDER.forEach(k => o[k] = buffers.fine[k].slice(-61).map(p => p.v));
+    return o;
+  }, [buffers, tick]);
+  return React.createElement("div", {
+    className: "tstrip",
+    role: "group",
+    "aria-label": "Live telemetry"
+  }, METRIC_ORDER.map(k => React.createElement(TelemetryCard, {
+    key: k,
+    k: k,
+    value: values[k],
+    hist: hists[k],
+    selected: selected === k,
+    onSelect: onSelect
+  })));
+}
+function niceTicks(min, max, count = 4) {
+  const span = max - min || 1;
+  const step0 = span / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const n = step0 / mag;
+  const step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+  const lo = Math.floor(min / step) * step,
+    hi = Math.ceil(max / step) * step;
+  const ticks = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(+v.toFixed(10));
+  return {
+    ticks,
+    lo,
+    hi,
+    step
+  };
+}
+function TelemetryChart({
+  metric,
+  onMetric,
+  range,
+  onRange,
+  height = 280,
+  title = 'Telemetry history'
+}) {
+  const {
+    buffers,
+    tick,
+    values
+  } = useTelemetry();
+  const [wrapRef, width] = useWidth(640);
+  const [hi, setHi] = useState(null);
+  const m = METRICS[metric];
+  const pts = useMemo(() => getSeries(buffers, metric, range), [buffers, metric, range, tick]);
+  const W = Math.max(260, width),
+    H = height;
+  const padL = 60,
+    padR = 18,
+    padT = 18,
+    padB = 30;
+  let lo = Infinity,
+    hiV = -Infinity;
+  for (const p of pts) {
+    if (p.v < lo) lo = p.v;
+    if (p.v > hiV) hiV = p.v;
+  }
+  if (hiV - lo < 1e-6) {
+    lo -= 1;
+    hiV += 1;
+  }
+  const span = hiV - lo;
+  const nt = niceTicks(lo - span * 0.12, hiV + span * 0.12, 4);
+  const t0 = pts[0].t,
+    t1 = pts[pts.length - 1].t;
+  const x = t => padL + (t - t0) / (t1 - t0 || 1) * (W - padL - padR);
+  const y = v => padT + (1 - (v - nt.lo) / (nt.hi - nt.lo || 1)) * (H - padT - padB);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)} ${y(p.v).toFixed(1)}`).join('');
+  const area = `${line}L${x(t1).toFixed(1)} ${H - padB}L${x(t0).toFixed(1)} ${H - padB}Z`;
+  const xticks = [0, 0.25, 0.5, 0.75, 1].map(f => t0 + (t1 - t0) * f);
+  const fmtT = t => range.id === '5m' ? fmtUTC(new Date(t)) : fmtUTCShort(new Date(t));
+  const limit = m.warn ? m.warn.below != null ? m.warn.below : m.warn.above : null;
+  const limitIn = limit != null && limit >= nt.lo && limit <= nt.hi;
+  const last = pts[pts.length - 1];
+  const hp = hi != null ? pts[Math.min(hi, pts.length - 1)] : null;
+  const gid = 'cg-' + metric;
+  const onMove = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * W;
+    const t = t0 + (px - padL) / (W - padL - padR) * (t1 - t0);
+    let best = 0,
+      bd = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const d = Math.abs(pts[i].t - t);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    setHi(best);
+  };
+  const onKey = e => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setHi(h => Math.max(0, (h == null ? pts.length - 1 : h) - 1));
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setHi(h => Math.min(pts.length - 1, (h == null ? pts.length - 1 : h) + 1));
+    }
+    if (e.key === 'Escape') setHi(null);
+  };
+  const metricOpts = METRIC_ORDER.map(k => ({
+    id: k,
+    label: METRICS[k].label
+  }));
+  return React.createElement(Panel, {
+    title: title,
+    instrument: true,
+    className: "chart-panel",
+    aside: React.createElement(Segmented, {
+      options: RANGES.map(r => ({
+        id: r.id,
+        label: r.label
+      })),
+      value: range.id,
+      onChange: id => onRange(RANGES.find(r => r.id === id)),
+      label: "Time range",
+      size: "sm"
+    })
+  }, React.createElement("div", {
+    className: "chart-top"
+  }, React.createElement("div", {
+    className: "seg-scroll"
+  }, React.createElement(Segmented, {
+    options: metricOpts,
+    value: metric,
+    onChange: onMetric,
+    label: "Metric"
+  })), React.createElement("div", {
+    className: "chart-now"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Current"), React.createElement("span", {
+    className: "chart-now-val"
+  }, React.createElement(AnimatedNumber, {
+    value: values[metric],
+    dec: m.dec
+  }), React.createElement("span", {
+    className: "unit"
+  }, m.unit)))), React.createElement("div", {
+    className: "chart-wrap",
+    ref: wrapRef
+  }, React.createElement("svg", {
+    width: W,
+    height: H,
+    viewBox: `0 0 ${W} ${H}`,
+    className: "chart",
+    role: "img",
+    tabIndex: 0,
+    "aria-label": `${m.label} over the last ${range.label}. Current ${fmtNum(values[metric], m.dec)} ${m.unit}. Use left and right arrow keys to inspect values.`,
+    onPointerMove: onMove,
+    onPointerLeave: () => setHi(null),
+    onKeyDown: onKey,
+    onBlur: () => setHi(null)
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: gid,
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "var(--cyan)",
+    stopOpacity: "0.16"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "var(--cyan)",
+    stopOpacity: "0"
+  }))), nt.ticks.map(v => React.createElement("g", {
+    key: v
+  }, React.createElement("line", {
+    x1: padL,
+    x2: W - padR,
+    y1: y(v),
+    y2: y(v),
+    className: "grid-line"
+  }), React.createElement("text", {
+    x: padL - 10,
+    y: y(v) + 4,
+    className: "axis-text",
+    textAnchor: "end"
+  }, fmtNum(v, nt.step < 1 ? 1 : 0)))), xticks.map((t, i) => React.createElement("g", {
+    key: i
+  }, React.createElement("line", {
+    x1: x(t),
+    x2: x(t),
+    y1: padT,
+    y2: H - padB,
+    className: "grid-line v"
+  }), React.createElement("text", {
+    x: x(t),
+    y: H - 9,
+    className: "axis-text",
+    textAnchor: i === 0 ? 'start' : i === 4 ? 'end' : 'middle'
+  }, i === 4 ? 'Now' : fmtT(t)))), limitIn && React.createElement("g", {
+    className: "limit"
+  }, React.createElement("line", {
+    x1: padL,
+    x2: W - padR,
+    y1: y(limit),
+    y2: y(limit)
+  }), React.createElement("text", {
+    x: W - padR - 4,
+    y: y(limit) - 6,
+    textAnchor: "end"
+  }, "Limit ", fmtNum(limit, m.dec), " ", m.unit)), React.createElement("path", {
+    d: area,
+    fill: `url(#${gid})`,
+    key: 'a' + metric + range.id,
+    className: "chart-area"
+  }), React.createElement("path", {
+    d: line,
+    className: "chart-line",
+    key: 'l' + metric + range.id,
+    pathLength: "1"
+  }), React.createElement("circle", {
+    cx: x(last.t),
+    cy: y(last.v),
+    r: "3.5",
+    className: "chart-head"
+  }), React.createElement("circle", {
+    cx: x(last.t),
+    cy: y(last.v),
+    r: "3.5",
+    className: "chart-head-ring"
+  }), hp && React.createElement("g", {
+    className: "chart-cursor"
+  }, React.createElement("line", {
+    x1: x(hp.t),
+    x2: x(hp.t),
+    y1: padT,
+    y2: H - padB
+  }), React.createElement("circle", {
+    cx: x(hp.t),
+    cy: y(hp.v),
+    r: "4"
+  }))), hp && React.createElement("div", {
+    className: "chart-tip",
+    style: {
+      left: x(hp.t),
+      top: y(hp.v),
+      transform: `translate(${x(hp.t) > W * 0.7 ? 'calc(-100% - 12px)' : '12px'}, -50%)`
+    },
+    role: "status"
+  }, React.createElement("span", {
+    className: "num tip-v"
+  }, fmtNum(hp.v, m.dec), " ", m.unit), React.createElement("span", {
+    className: "tip-t"
+  }, "UTC ", fmtUTC(new Date(hp.t))))));
+}
+const MAP_W = 960,
+  MAP_H = 520,
+  MAP_S = 2;
+const MAP_FIT = {
+  cislunar: {
+    fx: 200,
+    fy: -6,
+    z: 1
+  },
+  lunar: {
+    fx: 150,
+    fy: 26,
+    z: 0.36
+  }
+};
+function OrbitalMap({
+  mode = 'cislunar',
+  compact = false,
+  ariaLabel
+}) {
+  const {
+    values
+  } = useTelemetry();
+  const now = useNow();
+  const reduced = useReducedMotion();
+  const fit = MAP_FIT[mode];
+  const [v, setV] = useState({
+    fx: fit.fx,
+    fy: fit.fy,
+    zoom: 1,
+    rot: 0
+  });
+  const [show, setShow] = useState({
+    paths: true,
+    labels: true,
+    grid: true
+  });
+  const [hover, setHover] = useState(false);
+  const [sel, setSel] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const [hint, setHint] = useState(false);
+  const [anim, setAnim] = useState(() => performance.now());
+  const svgRef = useRef(null);
+  const ptrs = useRef(new Map());
+  const drag = useRef(null);
+  const pinch = useRef(null);
+  const hintT = useRef(0);
+  useEffect(() => {
+    setV({
+      fx: MAP_FIT[mode].fx,
+      fy: MAP_FIT[mode].fy,
+      zoom: 1,
+      rot: 0
+    });
+    setSel(false);
+  }, [mode]);
+  useEffect(() => {
+    if (mode !== 'lunar' || reduced) return;
+    let id;
+    const f = t => {
+      setAnim(t);
+      id = requestAnimationFrame(f);
+    };
+    id = requestAnimationFrame(f);
+    return () => cancelAnimationFrame(id);
+  }, [mode, reduced]);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const onWheel = e => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        setV(s => ({
+          ...s,
+          zoom: clamp(s.zoom * Math.exp(-e.deltaY * 0.0022), 0.5, 14)
+        }));
+      } else {
+        setHint(true);
+        clearTimeout(hintT.current);
+        hintT.current = setTimeout(() => setHint(false), 1500);
+      }
+    };
+    el.addEventListener('wheel', onWheel, {
+      passive: false
+    });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+  const z = fit.z * v.zoom;
+  const cr = Math.cos(v.rot),
+    sr = Math.sin(v.rot);
+  const P = ([x, y]) => {
+    const dx = x - v.fx,
+      dy = y - v.fy;
+    return [MAP_W / 2 + (dx * cr - dy * sr) * z * MAP_S, MAP_H / 2 + (dx * sr + dy * cr) * z * MAP_S];
+  };
+  const unP = (sx, sy) => {
+    const vx = (sx - MAP_W / 2) / (z * MAP_S),
+      vy = (sy - MAP_H / 2) / (z * MAP_S);
+    return [vx * cr + vy * sr + v.fx, -vx * sr + vy * cr + v.fy];
+  };
+  const pathOf = pts => pts.map((p, i) => {
+    const q = P(p);
+    return `${i ? 'L' : 'M'}${q[0].toFixed(1)} ${q[1].toFixed(1)}`;
+  }).join('');
+  const sample = (p, e, a, b, n) => {
+    const r = [];
+    for (let i = 0; i <= n; i++) r.push(conic(p, e, a + (b - a) * i / n));
+    return r;
+  };
+  let craft,
+    flown,
+    planned,
+    extra = null,
+    bodies = [],
+    rings = [],
+    ringCenter,
+    labels = [],
+    info,
+    craftTh,
+    tangentNext,
+    preview = null;
+  const unit = mode === 'cislunar' ? CIS.unit : LUN.unit;
+  if (mode === 'cislunar') {
+    const c = craftCis(values.altitude);
+    craftTh = c.th;
+    craft = c.pos;
+    flown = sample(CIS.p, CIS.e, 0, c.th, 180);
+    planned = sample(CIS.p, CIS.e, c.th, Math.PI, 40);
+    extra = sample(CIS.p, CIS.e, Math.PI, 2 * Math.PI, 160);
+    tangentNext = conic(CIS.p, CIS.e, c.th + 0.004);
+    ringCenter = [0, 0];
+    rings = [100, 200, 300, 400].map(r => ({
+      r,
+      label: `${r * 1000 / 1000},000 km`.replace(',000 km', 'k km')
+    }));
+    bodies = [{
+      id: 'earth',
+      pos: [0, 0],
+      r: CIS.earthR,
+      kind: 'earth',
+      label: 'Earth'
+    }, {
+      id: 'moon',
+      pos: CIS.moon,
+      r: CIS.moonR,
+      kind: 'moon',
+      label: 'Moon'
+    }];
+    const mg = moonGeometry(values.altitude);
+    info = [['Distance from Earth', `${fmtNum(values.altitude)} km`], ['Distance to Moon', `${fmtNum(mg.range)} km`], ['Velocity', `${fmtNum(values.velocity)} km/h`], ['True anomaly', `${fmtNum(c.th * 180 / Math.PI, 2)}°`]];
+    labels = [{
+      at: conic(CIS.p, CIS.e, 0),
+      text: 'Perigee 207 km',
+      dx: 0,
+      dy: 22,
+      anchor: 'middle',
+      mark: true
+    }];
+  } else {
+    const th = lunarApproachTheta(now);
+    craftTh = th;
+    craft = conic(LUN.ph, LUN.eh, th);
+    flown = sample(LUN.ph, LUN.eh, -2.05, th, 120);
+    planned = sample(LUN.ph, LUN.eh, th, 0, 60);
+    extra = sample(LUN.p, LUN.e, 0, 2 * Math.PI, 240);
+    tangentNext = conic(LUN.ph, LUN.eh, th + 0.004);
+    ringCenter = [0, 0];
+    rings = [250, 500].map(r => ({
+      r,
+      label: `${fmtNum(r * 10)} km`
+    }));
+    bodies = [{
+      id: 'moon',
+      pos: [0, 0],
+      r: LUN.R,
+      kind: 'moon',
+      label: 'Moon'
+    }];
+    const rk = Math.hypot(craft[0], craft[1]) * 10;
+    const aH = LUN.ph * 10 / (LUN.eh * LUN.eh - 1);
+    const vel = Math.sqrt(LUN.mu * (2 / rk + 1 / aH)) * 3600;
+    info = [['Altitude above Moon', `${fmtNum(rk - 1737)} km`], ['Moon-relative velocity', `${fmtNum(vel)} km/h`], ['Time to LOI burn', fmtDur(LOI_AT - now)], ['Target orbit', '100 \u00d7 3,000 km polar']];
+    labels = [{
+      at: [-LUN.rp, 0],
+      text: `LOI burn  T\u2212${fmtDur(LOI_AT - now)}`,
+      dx: -14,
+      dy: 4,
+      anchor: 'end',
+      mark: true
+    }, {
+      at: [LUN.ra, 0],
+      text: 'Aposelene 3,000 km',
+      dx: 14,
+      dy: 4,
+      anchor: 'start',
+      mark: true
+    }];
+    if (!reduced) {
+      const T = 24000;
+      const M = anim % T / T * 2 * Math.PI;
+      preview = conic(LUN.p, LUN.e, solveKepler(M, LUN.e));
+    }
+  }
+  const cq = P(craft);
+  const tq = P(tangentNext);
+  let tx = tq[0] - cq[0],
+    ty = tq[1] - cq[1];
+  const tl = Math.hypot(tx, ty) || 1;
+  tx /= tl;
+  ty /= tl;
+  const kmPerPx = unit / (z * MAP_S);
+  const raw = 120 * kmPerPx;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const nice = (raw / mag >= 5 ? 5 : raw / mag >= 2 ? 2 : 1) * mag;
+  const barLen = nice / kmPerPx;
+  const toView = e => {
+    const r = svgRef.current.getBoundingClientRect();
+    return [(e.clientX - r.left) * MAP_W / r.width, (e.clientY - r.top) * MAP_H / r.height];
+  };
+  const onDown = e => {
+    if (e.target.closest && e.target.closest('.craft-hit')) return;
+    svgRef.current.setPointerCapture && svgRef.current.setPointerCapture(e.pointerId);
+    const p = toView(e);
+    ptrs.current.set(e.pointerId, p);
+    drag.current = {
+      start: p,
+      v: {
+        ...v
+      }
+    };
+    pinch.current = null;
+  };
+  const onMove = e => {
+    const p = toView(e);
+    if (ptrs.current.has(e.pointerId)) {
+      ptrs.current.set(e.pointerId, p);
+      if (ptrs.current.size >= 2) {
+        const [a, b] = [...ptrs.current.values()];
+        const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (!pinch.current) pinch.current = {
+          d,
+          zoom: v.zoom
+        };
+        const zNew = clamp(pinch.current.zoom * d / (pinch.current.d || 1), 0.5, 14);
+        setV(s => ({
+          ...s,
+          zoom: zNew
+        }));
+      } else if (drag.current) {
+        const dv = drag.current.v;
+        const zz = fit.z * dv.zoom,
+          c = Math.cos(dv.rot),
+          s = Math.sin(dv.rot);
+        const dx = (p[0] - drag.current.start[0]) / (zz * MAP_S),
+          dy = (p[1] - drag.current.start[1]) / (zz * MAP_S);
+        const sx = dx * c + dy * s,
+          sy = -dx * s + dy * c;
+        setV(st => ({
+          ...st,
+          fx: dv.fx - sx,
+          fy: dv.fy - sy
+        }));
+      }
+    } else {
+      setCursor(unP(p[0], p[1]));
+    }
+  };
+  const onUp = e => {
+    ptrs.current.delete(e.pointerId);
+    if (ptrs.current.size < 2) pinch.current = null;
+    if (ptrs.current.size === 1) {
+      const [rest] = [...ptrs.current.values()];
+      drag.current = {
+        start: rest,
+        v: {
+          ...v
+        }
+      };
+    } else if (ptrs.current.size === 0) drag.current = null;
+  };
+  const zoomBy = k => setV(s => ({
+    ...s,
+    zoom: clamp(s.zoom * k, 0.5, 14)
+  }));
+  const rotBy = deg => setV(s => ({
+    ...s,
+    rot: s.rot + deg * Math.PI / 180
+  }));
+  const reset = () => setV({
+    fx: fit.fx,
+    fy: fit.fy,
+    zoom: 1,
+    rot: 0
+  });
+  const focusCraft = () => setV(s => ({
+    ...s,
+    fx: craft[0],
+    fy: craft[1],
+    zoom: Math.max(s.zoom, mode === 'cislunar' ? 5 : 2.2)
+  }));
+  const onKey = e => {
+    const step = 40 / (z * MAP_S);
+    const panBy = (dx, dy) => setV(s => ({
+      ...s,
+      fx: s.fx + dx * cr + dy * sr,
+      fy: s.fy - dx * sr + dy * cr
+    }));
+    const map = {
+      ArrowLeft: () => panBy(-step, 0),
+      ArrowRight: () => panBy(step, 0),
+      ArrowUp: () => panBy(0, -step),
+      ArrowDown: () => panBy(0, step),
+      '+': () => zoomBy(1.25),
+      '=': () => zoomBy(1.25),
+      '-': () => zoomBy(0.8),
+      r: () => rotBy(15),
+      R: () => rotBy(-15),
+      '0': reset
+    };
+    if (map[e.key]) {
+      e.preventDefault();
+      map[e.key]();
+    }
+  };
+  const toggle = k => setShow(s => ({
+    ...s,
+    [k]: !s[k]
+  }));
+  const craftAct = () => setSel(s => !s);
+  const rc = P(ringCenter);
+  const tipLeft = cq[0] > MAP_W * 0.68;
+  const cursorKm = cursor ? [cursor[0] * unit, cursor[1] * unit] : null;
+  return React.createElement("div", {
+    className: 'omap' + (compact ? ' compact' : '')
+  }, React.createElement("svg", {
+    ref: svgRef,
+    viewBox: `0 0 ${MAP_W} ${MAP_H}`,
+    className: "omap-svg",
+    tabIndex: 0,
+    role: "application",
+    "aria-label": ariaLabel || 'Orbital map. Drag to pan, Ctrl and scroll or plus and minus to zoom, R to rotate, 0 to reset.',
+    onPointerDown: onDown,
+    onPointerMove: onMove,
+    onPointerUp: onUp,
+    onPointerCancel: onUp,
+    onPointerLeave: () => setCursor(null),
+    onKeyDown: onKey
+  }, React.createElement("defs", null, React.createElement("radialGradient", {
+    id: "earthG",
+    cx: "0.36",
+    cy: "0.34",
+    r: "0.75"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#8EC3FF"
+  }), React.createElement("stop", {
+    offset: "0.45",
+    stopColor: "#2F66B8"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#0A1B3E"
+  })), React.createElement("radialGradient", {
+    id: "moonG",
+    cx: "0.38",
+    cy: "0.35",
+    r: "0.8"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#D9DDE4"
+  }), React.createElement("stop", {
+    offset: "0.55",
+    stopColor: "#8D95A3"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#343A45"
+  })), React.createElement("linearGradient", {
+    id: "termG",
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "0"
+  }, React.createElement("stop", {
+    offset: "0.45",
+    stopColor: "#02050B",
+    stopOpacity: "0"
+  }), React.createElement("stop", {
+    offset: "0.8",
+    stopColor: "#02050B",
+    stopOpacity: "0.72"
+  })), React.createElement("radialGradient", {
+    id: "glowG",
+    cx: "0.5",
+    cy: "0.5",
+    r: "0.5"
+  }, React.createElement("stop", {
+    offset: "0.6",
+    stopColor: "#5FD0E4",
+    stopOpacity: "0.16"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#5FD0E4",
+    stopOpacity: "0"
+  }))), show.grid && React.createElement("g", {
+    className: "og-grid"
+  }, (() => {
+    const a1 = P([ringCenter[0] - 2000, ringCenter[1]]),
+      a2 = P([ringCenter[0] + 2000, ringCenter[1]]);
+    const b1 = P([ringCenter[0], ringCenter[1] - 2000]),
+      b2 = P([ringCenter[0], ringCenter[1] + 2000]);
+    return React.createElement(React.Fragment, null, React.createElement("line", {
+      x1: a1[0],
+      y1: a1[1],
+      x2: a2[0],
+      y2: a2[1]
+    }), React.createElement("line", {
+      x1: b1[0],
+      y1: b1[1],
+      x2: b2[0],
+      y2: b2[1]
+    }));
+  })(), rings.map(r => {
+    const lp = P([ringCenter[0] + r.r * Math.cos(-0.6), ringCenter[1] + r.r * Math.sin(-0.6)]);
+    return React.createElement("g", {
+      key: r.r
+    }, React.createElement("circle", {
+      cx: rc[0],
+      cy: rc[1],
+      r: r.r * z * MAP_S
+    }), show.labels && React.createElement("text", {
+      x: lp[0] + 4,
+      y: lp[1] - 4,
+      className: "og-ring-label"
+    }, mode === 'cislunar' ? `${fmtNum(r.r * 1000)} km` : r.label));
+  })), mode === 'cislunar' && show.paths && React.createElement("circle", {
+    cx: P([0, 0])[0],
+    cy: P([0, 0])[1],
+    r: 384.4 * z * MAP_S,
+    className: "moon-orbit"
+  }), show.paths && extra && React.createElement("path", {
+    d: pathOf(extra),
+    className: mode === 'lunar' ? 'target-orbit' : 'return-leg'
+  }), show.paths && React.createElement("path", {
+    d: pathOf(planned),
+    className: "traj-planned"
+  }), React.createElement("path", {
+    d: pathOf(flown),
+    className: "traj-flown"
+  }), bodies.map(b => {
+    const q = P(b.pos),
+      r = Math.max(2.5, b.r * z * MAP_S);
+    return React.createElement("g", {
+      key: b.id,
+      className: 'body ' + b.kind
+    }, b.kind === 'earth' && React.createElement("circle", {
+      cx: q[0],
+      cy: q[1],
+      r: r * 1.35,
+      fill: "url(#glowG)"
+    }), React.createElement("circle", {
+      cx: q[0],
+      cy: q[1],
+      r: r,
+      fill: b.kind === 'earth' ? 'url(#earthG)' : 'url(#moonG)'
+    }), b.kind === 'moon' && r > 26 && React.createElement("g", {
+      className: "craters"
+    }, [[-0.3, -0.25, 0.14], [0.22, 0.1, 0.1], [-0.05, 0.38, 0.08], [0.35, -0.35, 0.06], [-0.45, 0.2, 0.07]].map(([ox, oy, cr2], i) => React.createElement("circle", {
+      key: i,
+      cx: q[0] + ox * r,
+      cy: q[1] + oy * r,
+      r: cr2 * r
+    }))), React.createElement("circle", {
+      cx: q[0],
+      cy: q[1],
+      r: r,
+      fill: "url(#termG)"
+    }), b.kind === 'earth' && React.createElement("circle", {
+      cx: q[0],
+      cy: q[1],
+      r: r + 1.5,
+      className: "atmo"
+    }), show.labels && React.createElement("text", {
+      x: q[0],
+      y: q[1] + r + 18,
+      className: "body-label",
+      textAnchor: "middle"
+    }, b.label));
+  }), show.labels && labels.map((l, i) => {
+    const q = P(l.at);
+    return React.createElement("g", {
+      key: i,
+      className: "map-mark"
+    }, l.mark && React.createElement("path", {
+      d: `M${q[0] - 4} ${q[1]}L${q[0]} ${q[1] - 4}L${q[0] + 4} ${q[1]}L${q[0]} ${q[1] + 4}Z`
+    }), React.createElement("text", {
+      x: q[0] + l.dx,
+      y: q[1] + l.dy,
+      textAnchor: l.anchor
+    }, l.text));
+  }), preview && (() => {
+    const q = P(preview);
+    return React.createElement("g", {
+      className: "preview"
+    }, React.createElement("circle", {
+      cx: q[0],
+      cy: q[1],
+      r: "3"
+    }), show.labels && React.createElement("text", {
+      x: q[0] + 8,
+      y: q[1] - 6
+    }, "Planned orbit preview"));
+  })(), React.createElement("g", {
+    className: "heading"
+  }, React.createElement("line", {
+    x1: cq[0] + tx * 12,
+    y1: cq[1] + ty * 12,
+    x2: cq[0] + tx * 34,
+    y2: cq[1] + ty * 34
+  }), React.createElement("path", {
+    d: `M${cq[0] + tx * 40} ${cq[1] + ty * 40}L${cq[0] + tx * 31 - ty * 4.5} ${cq[1] + ty * 31 + tx * 4.5}L${cq[0] + tx * 31 + ty * 4.5} ${cq[1] + ty * 31 - tx * 4.5}Z`
+  })), React.createElement("g", {
+    className: 'craft-hit' + (sel ? ' sel' : '') + (hover ? ' hov' : ''),
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `${MISSION.vehicle} spacecraft. ${sel ? 'Hide' : 'Show'} details`,
+    "aria-pressed": sel,
+    onClick: craftAct,
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        craftAct();
+      }
+    },
+    onPointerEnter: () => setHover(true),
+    onPointerLeave: () => setHover(false),
+    onFocus: () => setHover(true),
+    onBlur: () => setHover(false)
+  }, React.createElement("circle", {
+    cx: cq[0],
+    cy: cq[1],
+    r: "18",
+    className: "hit"
+  }), !reduced && React.createElement("circle", {
+    cx: cq[0],
+    cy: cq[1],
+    r: "6",
+    className: "craft-pulse"
+  }), React.createElement("path", {
+    d: `M${cq[0]} ${cq[1] - 6}L${cq[0] + 6} ${cq[1]}L${cq[0]} ${cq[1] + 6}L${cq[0] - 6} ${cq[1]}Z`,
+    className: "craft-mark"
+  }), sel && React.createElement("g", {
+    className: "brackets"
+  }, [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy], i) => React.createElement("path", {
+    key: i,
+    d: `M${cq[0] + sx * 15} ${cq[1] + sy * 9}V${cq[1] + sy * 15}H${cq[0] + sx * 9}`
+  }))), show.labels && React.createElement("text", {
+    x: cq[0] + (tipLeft ? -16 : 16),
+    y: cq[1] + (mode === 'cislunar' ? -14 : 22),
+    textAnchor: tipLeft ? 'end' : 'start',
+    className: "craft-label"
+  }, MISSION.vehicle)), React.createElement("g", {
+    className: "scalebar",
+    transform: `translate(${MAP_W - 24 - barLen} ${MAP_H - 22})`
+  }, React.createElement("path", {
+    d: `M0 -5V0H${barLen}V-5`
+  }), React.createElement("text", {
+    x: barLen / 2,
+    y: "-10",
+    textAnchor: "middle"
+  }, fmtNum(nice), " km"))), React.createElement("div", {
+    className: "omap-tools",
+    role: "toolbar",
+    "aria-label": "Map controls"
+  }, React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: () => zoomBy(1.3),
+    "aria-label": "Zoom in",
+    title: "Zoom in"
+  }, React.createElement(Icon, {
+    name: "plus",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: () => zoomBy(1 / 1.3),
+    "aria-label": "Zoom out",
+    title: "Zoom out"
+  }, React.createElement(Icon, {
+    name: "minus",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: () => rotBy(-15),
+    "aria-label": "Rotate counterclockwise",
+    title: "Rotate counterclockwise"
+  }, React.createElement(Icon, {
+    name: "rotccw",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: () => rotBy(15),
+    "aria-label": "Rotate clockwise",
+    title: "Rotate clockwise"
+  }, React.createElement(Icon, {
+    name: "rotcw",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: focusCraft,
+    "aria-label": "Center on spacecraft",
+    title: "Center on spacecraft"
+  }, React.createElement(Icon, {
+    name: "target",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon",
+    onClick: reset,
+    "aria-label": "Reset view",
+    title: "Reset view"
+  }, React.createElement(Icon, {
+    name: "fit",
+    size: 16
+  })), React.createElement("span", {
+    className: "tool-sep",
+    "aria-hidden": "true"
+  }), React.createElement("button", {
+    type: "button",
+    className: "btn icon toggle",
+    "aria-pressed": show.paths,
+    onClick: () => toggle('paths'),
+    "aria-label": "Show orbital paths",
+    title: "Orbital paths"
+  }, React.createElement(Icon, {
+    name: "route",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon toggle",
+    "aria-pressed": show.labels,
+    onClick: () => toggle('labels'),
+    "aria-label": "Show labels",
+    title: "Labels"
+  }, React.createElement(Icon, {
+    name: "label",
+    size: 16
+  })), React.createElement("button", {
+    type: "button",
+    className: "btn icon toggle",
+    "aria-pressed": show.grid,
+    onClick: () => toggle('grid'),
+    "aria-label": "Show range grid",
+    title: "Range grid"
+  }, React.createElement(Icon, {
+    name: "grid",
+    size: 16
+  }))), hover && !sel && React.createElement("div", {
+    className: "omap-tip",
+    style: {
+      left: `${cq[0] / MAP_W * 100}%`,
+      top: `${cq[1] / MAP_H * 100}%`,
+      transform: `translate(${tipLeft ? 'calc(-100% - 22px)' : '22px'}, -50%)`
+    }
+  }, React.createElement("strong", null, MISSION.vehicle), React.createElement("span", null, info[0][0], " ", React.createElement("b", {
+    className: "num"
+  }, info[0][1])), React.createElement("span", null, info[1][0], " ", React.createElement("b", {
+    className: "num"
+  }, info[1][1])), React.createElement("em", null, "Select for details")), sel && React.createElement("div", {
+    className: "omap-card",
+    role: "region",
+    "aria-label": "Spacecraft details"
+  }, React.createElement("div", {
+    className: "oc-head"
+  }, React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Tracking"), React.createElement("strong", null, MISSION.vehicle)), React.createElement("button", {
+    type: "button",
+    className: "btn icon ghost",
+    onClick: () => setSel(false),
+    "aria-label": "Close details"
+  }, React.createElement(Icon, {
+    name: "x",
+    size: 16
+  }))), React.createElement("dl", null, info.map(([k, val]) => React.createElement("div", {
+    key: k
+  }, React.createElement("dt", null, k), React.createElement("dd", {
+    className: "num"
+  }, val)))), React.createElement("button", {
+    type: "button",
+    className: "btn wide",
+    onClick: focusCraft
+  }, React.createElement(Icon, {
+    name: "target",
+    size: 14
+  }), "Center view on spacecraft")), !compact && React.createElement("div", {
+    className: "omap-legend",
+    "aria-hidden": "true"
+  }, React.createElement("span", null, React.createElement("i", {
+    className: "lg-flown"
+  }), "Flown"), React.createElement("span", null, React.createElement("i", {
+    className: "lg-planned"
+  }), "Planned"), mode === 'lunar' ? React.createElement("span", null, React.createElement("i", {
+    className: "lg-target"
+  }), "Target orbit") : React.createElement("span", null, React.createElement("i", {
+    className: "lg-moon"
+  }), "Lunar orbit"), React.createElement("span", {
+    className: "lg-note"
+  }, "Bodies not to scale")), React.createElement("div", {
+    className: "omap-readout num",
+    "aria-hidden": "true"
+  }, cursorKm ? React.createElement(React.Fragment, null, "X ", fmtNum(cursorKm[0]), " km\xA0\xA0Y ", fmtNum(-cursorKm[1]), " km\xA0\xA0R ", fmtNum(Math.hypot(cursorKm[0], cursorKm[1])), " km") : React.createElement(React.Fragment, null, "ZOOM ", v.zoom.toFixed(2), "×\xA0\xA0ROT ", fmtNum((v.rot * 180 / Math.PI % 360 + 360) % 360), "°")), React.createElement("div", {
+    className: 'omap-hint' + (hint ? ' on' : ''),
+    "aria-hidden": "true"
+  }, "Hold Ctrl and scroll to zoom"));
+}
+function Radar() {
+  const {
+    values,
+    tick
+  } = useTelemetry();
+  const reduced = useReducedMotion();
+  const mg = moonGeometry(values.altitude);
+  const RANGE = 40000,
+    R = 132,
+    PERIOD = 6;
+  const objs = [{
+    id: 'moon',
+    name: 'Moon',
+    brg: mg.bearing,
+    range: mg.range,
+    kind: 'body'
+  }, {
+    id: 'lr2',
+    name: 'Relay LR-2',
+    brg: (212 + tick * 0.02) % 360,
+    range: 31200 - tick * 1.1,
+    kind: 'craft'
+  }, {
+    id: 'kst',
+    name: 'Kestrel probe',
+    brg: (305 - tick * 0.015 + 360) % 360,
+    range: 17400 + tick * 0.7,
+    kind: 'craft'
+  }, {
+    id: 'deb',
+    name: 'Object 2291',
+    brg: (48 + tick * 0.04) % 360,
+    range: 9800 + tick * 1.6,
+    kind: 'debris'
+  }];
+  const slices = 10,
+    spread = 42;
+  const wedges = [];
+  for (let i = 0; i < slices; i++) {
+    const a0 = -(i + 1) * spread / slices,
+      a1 = -i * spread / slices;
+    const p0 = [R * Math.sin(a0 * Math.PI / 180), -R * Math.cos(a0 * Math.PI / 180)];
+    const p1 = [R * Math.sin(a1 * Math.PI / 180), -R * Math.cos(a1 * Math.PI / 180)];
+    wedges.push(React.createElement("path", {
+      key: i,
+      d: `M0 0L${p0[0].toFixed(2)} ${p0[1].toFixed(2)}A${R} ${R} 0 0 1 ${p1[0].toFixed(2)} ${p1[1].toFixed(2)}Z`,
+      style: {
+        opacity: 0.2 * (1 - i / slices)
+      }
+    }));
+  }
+  return React.createElement("div", {
+    className: "radar"
+  }, React.createElement("svg", {
+    viewBox: "-150 -150 300 300",
+    className: "radar-svg",
+    role: "img",
+    "aria-label": `Proximity radar, ${fmtNum(RANGE)} kilometre range. ${objs.map(o => `${o.name} bearing ${Math.round(o.brg)} degrees, ${fmtNum(o.range)} km`).join('. ')}`
+  }, [0.25, 0.5, 0.75, 1].map(f => React.createElement("circle", {
+    key: f,
+    r: R * f,
+    className: "r-ring"
+  })), Array.from({
+    length: 36
+  }).map((_, i) => {
+    const a = i * 10 * Math.PI / 180,
+      l = i % 9 === 0 ? 8 : 4;
+    return React.createElement("line", {
+      key: i,
+      x1: (R + 2) * Math.sin(a),
+      y1: -(R + 2) * Math.cos(a),
+      x2: (R + 2 + l) * Math.sin(a),
+      y2: -(R + 2 + l) * Math.cos(a),
+      className: "r-tick"
+    });
+  }), React.createElement("line", {
+    x1: -R,
+    x2: R,
+    y1: "0",
+    y2: "0",
+    className: "r-cross"
+  }), React.createElement("line", {
+    y1: -R,
+    y2: R,
+    x1: "0",
+    x2: "0",
+    className: "r-cross"
+  }), [['000', 0, -R - 16], ['090', R + 18, 3], ['180', 0, R + 22], ['270', -R - 18, 3]].map(([t, x, y]) => React.createElement("text", {
+    key: t,
+    x: x,
+    y: y,
+    textAnchor: "middle",
+    className: "r-deg"
+  }, t)), [1, 2, 3].map(i => React.createElement("text", {
+    key: i,
+    x: "3",
+    y: -R * (i / 4) - 3,
+    className: "r-rlabel"
+  }, i * 10, "k")), React.createElement("g", {
+    className: 'r-sweep' + (reduced ? ' still' : ''),
+    style: {
+      animationDuration: PERIOD + 's'
+    }
+  }, wedges, React.createElement("line", {
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: -R,
+    className: "r-lead"
+  })), objs.map(o => {
+    const r = clamp(o.range, 0, RANGE) / RANGE * R,
+      a = o.brg * Math.PI / 180;
+    const x = r * Math.sin(a),
+      y = -r * Math.cos(a);
+    return React.createElement("g", {
+      key: o.id,
+      className: 'r-obj ' + o.kind
+    }, React.createElement("g", {
+      className: 'r-blip' + (reduced ? ' still' : ''),
+      style: {
+        animationDuration: PERIOD + 's',
+        animationDelay: (o.brg / 360 * PERIOD).toFixed(2) + 's'
+      }
+    }, o.kind === 'body' ? React.createElement("circle", {
+      cx: x,
+      cy: y,
+      r: "4.5"
+    }) : o.kind === 'debris' ? React.createElement("rect", {
+      x: x - 2.5,
+      y: y - 2.5,
+      width: "5",
+      height: "5",
+      transform: `rotate(45 ${x} ${y})`
+    }) : React.createElement("circle", {
+      cx: x,
+      cy: y,
+      r: "3"
+    })), React.createElement("text", {
+      x: x + 7,
+      y: y + 3
+    }, o.name));
+  }), React.createElement("path", {
+    d: "M0 -5L4 3L-4 3Z",
+    className: "r-self"
+  })), React.createElement("table", {
+    className: "radar-table"
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    scope: "col"
+  }, "Object"), React.createElement("th", {
+    scope: "col"
+  }, "Bearing"), React.createElement("th", {
+    scope: "col"
+  }, "Range"))), React.createElement("tbody", null, objs.map(o => React.createElement("tr", {
+    key: o.id
+  }, React.createElement("td", null, o.name), React.createElement("td", {
+    className: "num"
+  }, pad(Math.round(o.brg) % 360, 3), "°"), React.createElement("td", {
+    className: "num"
+  }, fmtNum(o.range), " km"))))));
+}
+function MissionTimeline({
+  items,
+  compact,
+  empty
+}) {
+  if (!items.length) return React.createElement("p", {
+    className: "empty"
+  }, empty || 'No events match this filter.');
+  return React.createElement("ol", {
+    className: 'timeline' + (compact ? ' compact' : '')
+  }, items.map(it => React.createElement("li", {
+    key: it.id,
+    className: 'tl-item cat-' + it.cat
+  }, React.createElement("time", {
+    className: "num",
+    dateTime: new Date(it.t).toISOString()
+  }, fmtUTC(new Date(it.t))), React.createElement("span", {
+    className: "tl-node",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "tl-body"
+  }, React.createElement("div", {
+    className: "tl-title"
+  }, it.title), !compact && it.detail && React.createElement("p", null, it.detail), !compact && React.createElement("span", {
+    className: "tl-cat"
+  }, LOG_CATS[it.cat].label)))));
+}
+function Situation({
+  navigate
+}) {
+  const {
+    values
+  } = useTelemetry();
+  const now = useNow();
+  const {
+    subs,
+    setSelectedSub,
+    alerts
+  } = useMission();
+  const mg = moonGeometry(values.altitude);
+  const cautions = Object.values(subs).filter(s => s.status === 'warning' || s.status === 'critical');
+  const critical = alerts.some(a => a.level === 'critical');
+  const inspect = id => {
+    setSelectedSub(id);
+    navigate('spacecraft');
+  };
+  return React.createElement(Panel, {
+    title: "Situation",
+    instrument: true,
+    className: "situation",
+    bodyClass: "sit-body"
+  }, React.createElement("div", {
+    className: "sit-block"
+  }, React.createElement("h3", {
+    className: "sit-q"
+  }, "Where it is"), React.createElement("div", {
+    className: "sit-big"
+  }, React.createElement(AnimatedNumber, {
+    value: values.altitude
+  }), React.createElement("span", {
+    className: "unit"
+  }, "km from Earth")), React.createElement("div", {
+    className: "sit-row"
+  }, React.createElement("span", null, "Distance to Moon"), React.createElement("span", {
+    className: "num"
+  }, fmtNum(mg.range), " km")), React.createElement("div", {
+    className: "sit-row"
+  }, React.createElement("span", null, "Velocity"), React.createElement("span", {
+    className: "num"
+  }, fmtNum(values.velocity), " km/h"))), React.createElement("div", {
+    className: "sit-block"
+  }, React.createElement("h3", {
+    className: "sit-q"
+  }, "What it is doing"), React.createElement("div", {
+    className: "sit-phase"
+  }, "Lunar orbit insertion, approach"), React.createElement("div", {
+    className: "sit-count"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Main engine burn in"), React.createElement("span", {
+    className: "num count"
+  }, "T−", fmtDur(LOI_AT - now))), React.createElement("div", {
+    className: "sit-row"
+  }, React.createElement("span", null, "Burn"), React.createElement("span", {
+    className: "num"
+  }, MISSION.loiDuration, " s, Δv ", MISSION.loiDv, " m/s"))), React.createElement("div", {
+    className: "sit-block"
+  }, React.createElement("h3", {
+    className: "sit-q"
+  }, "Is everything OK"), React.createElement("div", {
+    className: 'sit-verdict ' + (critical ? 'crit' : cautions.length ? 'warn' : 'ok')
+  }, React.createElement(StatusDot, {
+    cls: critical ? 'crit' : cautions.length ? 'warn' : 'ok',
+    pulse: critical
+  }), critical ? 'Critical alert active' : cautions.length ? `Nominal with ${cautions.length} caution` : 'All systems nominal'), React.createElement("ul", {
+    className: "sys-chips",
+    "aria-label": "Subsystem status"
+  }, Object.values(subs).map(s => React.createElement("li", {
+    key: s.id
+  }, React.createElement("button", {
+    type: "button",
+    className: 'sys-chip ' + STATUS_META[s.status].cls,
+    onClick: () => inspect(s.id),
+    "aria-label": `${s.name}: ${STATUS_META[s.status].label}. Inspect`
+  }, React.createElement(StatusDot, {
+    cls: STATUS_META[s.status].cls
+  }), s.name))))));
+}
+function RecentComms({
+  navigate
+}) {
+  const {
+    messages
+  } = useMission();
+  const last = messages.slice(-4).reverse();
+  return React.createElement(Panel, {
+    title: "Latest traffic",
+    aside: React.createElement("button", {
+      type: "button",
+      className: "btn sm",
+      onClick: () => navigate('comms')
+    }, "Open console")
+  }, React.createElement("ul", {
+    className: "mini-msgs"
+  }, last.map(m => React.createElement("li", {
+    key: m.id
+  }, React.createElement("span", {
+    className: "num mm-t"
+  }, fmtUTC(new Date(m.t))), React.createElement("span", {
+    className: 'mm-src src-' + m.src
+  }, CHANNELS[m.src].label), React.createElement("span", {
+    className: "mm-text"
+  }, m.text)))));
+}
+function Overview({
+  navigate
+}) {
+  const now = useNow();
+  const {
+    logs,
+    alerts
+  } = useMission();
+  const [metric, setMetric] = useState('altitude');
+  const [range, setRange] = useState(RANGES[0]);
+  const critical = alerts.some(a => a.level === 'critical');
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement("header", {
+    className: "mission-head"
+  }, React.createElement("div", {
+    className: "mh-id"
+  }, React.createElement("h1", {
+    tabIndex: -1
+  }, "Mission control"), React.createElement("p", {
+    className: "mh-name"
+  }, React.createElement("span", {
+    className: "num"
+  }, MISSION.code), " ", MISSION.name)), React.createElement("dl", {
+    className: "mh-facts"
+  }, React.createElement("div", null, React.createElement("dt", null, "Status"), React.createElement("dd", null, React.createElement(StatusPill, {
+    cls: critical ? 'crit' : 'ok'
+  }, critical ? 'Critical' : 'Nominal'))), React.createElement("div", null, React.createElement("dt", null, "Mission elapsed"), React.createElement("dd", {
+    className: "num"
+  }, "T+ ", fmtMET(now - LAUNCH_AT))), React.createElement("div", null, React.createElement("dt", null, "Progress"), React.createElement("dd", {
+    className: "num"
+  }, missionProgress(now).toFixed(1), " %")), React.createElement("div", {
+    className: "hide-sm"
+  }, React.createElement("dt", null, "Ground station"), React.createElement("dd", null, MISSION.station)))), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: "Cislunar trajectory",
+    instrument: true,
+    className: "s8 map-panel",
+    bodyClass: "flush",
+    aside: React.createElement("button", {
+      type: "button",
+      className: "btn sm",
+      onClick: () => navigate('orbit')
+    }, "Orbit detail")
+  }, React.createElement(OrbitalMap, {
+    mode: "cislunar"
+  })), React.createElement("div", {
+    className: "s4"
+  }, React.createElement(Situation, {
+    navigate: navigate
+  }))), React.createElement(TelemetryStrip, {
+    selected: metric,
+    onSelect: setMetric
+  }), React.createElement("div", {
+    className: "g"
+  }, React.createElement("div", {
+    className: "s8"
+  }, React.createElement(TelemetryChart, {
+    metric: metric,
+    onMetric: setMetric,
+    range: range,
+    onRange: setRange,
+    height: 260
+  })), React.createElement(Panel, {
+    title: "Proximity radar",
+    instrument: true,
+    className: "s4",
+    aside: React.createElement("span", {
+      className: "meta num"
+    }, "Range 40,000 km")
+  }, React.createElement(Radar, null))), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: "Recent events",
+    className: "s7",
+    aside: React.createElement("button", {
+      type: "button",
+      className: "btn sm",
+      onClick: () => navigate('logs')
+    }, "All logs")
+  }, React.createElement(MissionTimeline, {
+    items: logs.slice(0, 6),
+    compact: true
+  })), React.createElement("div", {
+    className: "s5"
+  }, React.createElement(RecentComms, {
+    navigate: navigate
+  }))));
+}
+function Orbit() {
+  const now = useNow();
+  const {
+    values
+  } = useTelemetry();
+  const [mode, setMode] = useState('cislunar');
+  const progress = missionProgress(now);
+  const mg = moonGeometry(values.altitude);
+  const elements = mode === 'cislunar' ? [['Apoapsis', '393,629 km'], ['Periapsis', '207 km'], ['Orbital period', '10 d 13 h 23 min'], ['Inclination', '28.7°'], ['Eccentricity', CIS.e.toFixed(4)], ['Distance from Earth', `${fmtNum(values.altitude)} km`], ['Distance to Moon', `${fmtNum(mg.range)} km`]] : [['Aposelene', '3,000 km'], ['Periselene', '100 km'], ['Orbital period', '4 h 41 min'], ['Inclination', '90.0° polar'], ['Eccentricity', LUN.e.toFixed(4)], ['Insertion \u0394v', `${MISSION.loiDv} m/s`], ['Burn starts', `T\u2212${fmtDur(LOI_AT - now)}`]];
+  const segs = 24,
+    filled = Math.round(progress / 100 * segs);
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Orbit",
+    desc: "Trajectory, orbital elements and mission phase. Switch views to compare the current transfer orbit with the planned lunar orbit."
+  }, React.createElement(Segmented, {
+    options: [{
+      id: 'cislunar',
+      label: 'Transfer orbit'
+    }, {
+      id: 'lunar',
+      label: 'Lunar arrival'
+    }],
+    value: mode,
+    onChange: setMode,
+    label: "Orbit view"
+  })), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: mode === 'cislunar' ? 'Earth-centred view' : 'Moon-centred view',
+    instrument: true,
+    className: "s8 map-panel",
+    bodyClass: "flush"
+  }, React.createElement(OrbitalMap, {
+    mode: mode
+  })), React.createElement("div", {
+    className: "s4 stack"
+  }, React.createElement(Panel, {
+    title: "Current phase",
+    instrument: true
+  }, React.createElement("div", {
+    className: "phase-now"
+  }, "Lunar orbit insertion"), React.createElement("p", {
+    className: "muted"
+  }, "Approach leg. Main engine burn at periselene in ", React.createElement("span", {
+    className: "num"
+  }, "T−", fmtDur(LOI_AT - now)), "."), React.createElement("div", {
+    className: "progress-head"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Mission progress"), React.createElement("span", {
+    className: "num"
+  }, progress.toFixed(1), " %")), React.createElement("div", {
+    className: "seg-bar",
+    role: "progressbar",
+    "aria-valuenow": Math.round(progress),
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    "aria-label": "Mission progress"
+  }, Array.from({
+    length: segs
+  }).map((_, i) => React.createElement("i", {
+    key: i,
+    className: i < filled ? 'on' : ''
+  })))), React.createElement(Panel, {
+    title: mode === 'cislunar' ? 'Transfer orbit elements' : 'Target orbit elements'
+  }, React.createElement("dl", {
+    className: "kv"
+  }, elements.map(([k, v]) => React.createElement("div", {
+    key: k
+  }, React.createElement("dt", null, k), React.createElement("dd", {
+    className: "num"
+  }, v))))))), React.createElement(Panel, {
+    title: "Mission phases"
+  }, React.createElement("ol", {
+    className: "phases"
+  }, PHASES.map((p, i) => React.createElement("li", {
+    key: p.id,
+    className: 'ph ' + p.state,
+    "aria-current": p.state === 'current' ? 'step' : undefined
+  }, React.createElement("span", {
+    className: "ph-n num"
+  }, pad(i + 1)), React.createElement("span", {
+    className: "ph-name"
+  }, p.name), React.createElement("span", {
+    className: "ph-when"
+  }, p.state === 'current' ? `Burn in T\u2212${fmtDur(LOI_AT - now)}` : p.when))))));
+}
+const PART_LABELS = {
+  lifesupport: {
+    a: [150, 222],
+    e: [120, 300],
+    l: [60, 300],
+    anchor: 'start'
+  },
+  navigation: {
+    a: [217, 154],
+    e: [200, 118],
+    l: [120, 118],
+    anchor: 'start'
+  },
+  comms: {
+    a: [300, 104],
+    e: [300, 70],
+    l: [220, 70],
+    anchor: 'start'
+  },
+  payload: {
+    a: [304, 258],
+    e: [304, 316],
+    l: [260, 316],
+    anchor: 'start'
+  },
+  power: {
+    a: [570, 72],
+    e: [640, 72],
+    l: [648, 72],
+    anchor: 'start'
+  },
+  thermal: {
+    a: [548, 182],
+    e: [690, 140],
+    l: [698, 140],
+    anchor: 'start'
+  },
+  propulsion: {
+    a: [646, 220],
+    e: [720, 220],
+    l: [728, 220],
+    anchor: 'start'
+  }
+};
+function SpacecraftViewer({
+  subs,
+  selected,
+  onSelect
+}) {
+  const reduced = useReducedMotion();
+  const part = (id, children) => {
+    const s = subs[id],
+      L = PART_LABELS[id];
+    const act = () => onSelect(id);
+    return React.createElement("g", {
+      className: `part st-${STATUS_META[s.status].cls}${selected === id ? ' sel' : ''}`,
+      role: "button",
+      tabIndex: 0,
+      "aria-label": `${s.name}, ${STATUS_META[s.status].label}. Inspect`,
+      "aria-pressed": selected === id,
+      onClick: act,
+      onKeyDown: e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          act();
+        }
+      }
+    }, children, React.createElement("g", {
+      className: "part-label"
+    }, React.createElement("circle", {
+      cx: L.a[0],
+      cy: L.a[1],
+      r: "2.5"
+    }), React.createElement("polyline", {
+      points: `${L.a[0]},${L.a[1]} ${L.e[0]},${L.e[1]} ${L.l[0] + (L.l[0] < L.e[0] ? 0 : 0)},${L.l[1]}`
+    }), React.createElement("text", {
+      x: L.l[0] < L.e[0] ? L.l[0] : L.l[0],
+      y: L.l[1] - 7
+    }, s.name), s.status !== 'nominal' && React.createElement("text", {
+      x: L.l[0],
+      y: L.l[1] + 14,
+      className: "part-state"
+    }, STATUS_META[s.status].label)));
+  };
+  return React.createElement("svg", {
+    viewBox: "0 0 900 440",
+    className: "craft-svg",
+    role: "group",
+    "aria-label": "AETHER-7 vehicle diagram. Select a subsystem to inspect it."
+  }, React.createElement("defs", null, React.createElement("pattern", {
+    id: "cells",
+    width: "14",
+    height: "12",
+    patternUnits: "userSpaceOnUse"
+  }, React.createElement("rect", {
+    width: "14",
+    height: "12",
+    fill: "#0C1B33"
+  }), React.createElement("path", {
+    d: "M0 0H14M0 0V12",
+    stroke: "#28446E",
+    strokeWidth: "0.8"
+  })), React.createElement("pattern", {
+    id: "fins",
+    width: "8",
+    height: "8",
+    patternUnits: "userSpaceOnUse",
+    patternTransform: "rotate(90)"
+  }, React.createElement("rect", {
+    width: "8",
+    height: "8",
+    fill: "#101B2C"
+  }), React.createElement("path", {
+    d: "M0 4H8",
+    stroke: "#3A506E",
+    strokeWidth: "1.2"
+  })), React.createElement("linearGradient", {
+    id: "plume",
+    x1: "0",
+    x2: "1",
+    y1: "0",
+    y2: "0"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#8FE3F2",
+    stopOpacity: "0.5"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#8FE3F2",
+    stopOpacity: "0"
+  })), React.createElement("linearGradient", {
+    id: "hull",
+    x1: "0",
+    x2: "0",
+    y1: "0",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#1A2940"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#0C1524"
+  }))), React.createElement("g", {
+    className: "craft-ref",
+    "aria-hidden": "true"
+  }, React.createElement("line", {
+    x1: "40",
+    x2: "860",
+    y1: "220",
+    y2: "220"
+  }), React.createElement("text", {
+    x: "44",
+    y: "212"
+  }, "Vehicle X axis"), React.createElement("path", {
+    d: "M108 400V412M646 400V412M108 406H646"
+  }), React.createElement("text", {
+    x: "377",
+    y: "428",
+    textAnchor: "middle"
+  }, "Overall length 17.6 m")), selected === 'propulsion' && !reduced && React.createElement("path", {
+    d: "M646 170L790 196V244L646 270Z",
+    fill: "url(#plume)",
+    className: "plume"
+  }), part('power', React.createElement(React.Fragment, null, React.createElement("line", {
+    x1: "465",
+    y1: "108",
+    x2: "465",
+    y2: "165",
+    className: "strut"
+  }), React.createElement("line", {
+    x1: "465",
+    y1: "275",
+    x2: "465",
+    y2: "332",
+    className: "strut"
+  }), React.createElement("rect", {
+    x: "360",
+    y: "34",
+    width: "210",
+    height: "74",
+    className: "shape array",
+    fill: "url(#cells)"
+  }), React.createElement("rect", {
+    x: "360",
+    y: "332",
+    width: "210",
+    height: "74",
+    className: "shape array",
+    fill: "url(#cells)"
+  }))), part('comms', React.createElement(React.Fragment, null, React.createElement("line", {
+    x1: "300",
+    y1: "182",
+    x2: "300",
+    y2: "122",
+    className: "strut"
+  }), React.createElement("path", {
+    d: "M258 116Q300 146 342 116Z",
+    className: "shape"
+  }), React.createElement("line", {
+    x1: "300",
+    y1: "130",
+    x2: "300",
+    y2: "104",
+    className: "strut"
+  }), React.createElement("circle", {
+    cx: "300",
+    cy: "104",
+    r: "3.5",
+    className: "shape"
+  }))), part('propulsion', React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "360",
+    y: "165",
+    width: "210",
+    height: "110",
+    rx: "3",
+    className: "shape",
+    fill: "url(#hull)"
+  }), React.createElement("circle", {
+    cx: "420",
+    cy: "220",
+    r: "24",
+    className: "inner"
+  }), React.createElement("circle", {
+    cx: "510",
+    cy: "220",
+    r: "24",
+    className: "inner"
+  }), React.createElement("path", {
+    d: "M570 198H584L646 162V278L584 242H570Z",
+    className: "shape",
+    fill: "url(#hull)"
+  }))), part('thermal', React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "382",
+    y: "170",
+    width: "166",
+    height: "20",
+    className: "shape fins",
+    fill: "url(#fins)"
+  }), React.createElement("rect", {
+    x: "382",
+    y: "250",
+    width: "166",
+    height: "20",
+    className: "shape fins",
+    fill: "url(#fins)"
+  }))), part('payload', React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "248",
+    y: "182",
+    width: "112",
+    height: "76",
+    className: "shape",
+    fill: "url(#hull)"
+  }), React.createElement("rect", {
+    x: "262",
+    y: "196",
+    width: "26",
+    height: "18",
+    className: "inner"
+  }), React.createElement("circle", {
+    cx: "330",
+    cy: "236",
+    r: "10",
+    className: "inner"
+  }))), part('lifesupport', React.createElement(React.Fragment, null, React.createElement("path", {
+    d: "M108 220L186 170H248V270H186Z",
+    className: "shape",
+    fill: "url(#hull)"
+  }), React.createElement("rect", {
+    x: "200",
+    y: "200",
+    width: "16",
+    height: "10",
+    rx: "2",
+    className: "inner"
+  }))), part('navigation', React.createElement(React.Fragment, null, React.createElement("rect", {
+    x: "198",
+    y: "154",
+    width: "18",
+    height: "16",
+    className: "shape"
+  }), React.createElement("rect", {
+    x: "222",
+    y: "154",
+    width: "18",
+    height: "16",
+    className: "shape"
+  }), React.createElement("circle", {
+    cx: "207",
+    cy: "154",
+    r: "4",
+    className: "inner"
+  }), React.createElement("circle", {
+    cx: "231",
+    cy: "154",
+    r: "4",
+    className: "inner"
+  }))));
+}
+function SubsystemDetail({
+  s,
+  onRun
+}) {
+  const {
+    tick
+  } = useTelemetry();
+  const now = useNow();
+  const meta = STATUS_META[s.status];
+  const temp = s.temp + ((tick * 7 + s.id.length) % 5 - 2) * 0.1;
+  return React.createElement("div", {
+    className: "sub-detail",
+    "aria-live": "polite"
+  }, React.createElement("div", {
+    className: "sd-head"
+  }, React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Subsystem"), React.createElement("h2", null, s.name)), React.createElement(StatusPill, {
+    cls: meta.cls
+  }, meta.label)), React.createElement("p", {
+    className: "muted"
+  }, s.desc), React.createElement("div", {
+    className: "sd-stats"
+  }, React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Health"), React.createElement("span", {
+    className: "sd-v"
+  }, React.createElement(AnimatedNumber, {
+    value: s.health,
+    dec: 1
+  }), React.createElement("span", {
+    className: "unit"
+  }, "%")), React.createElement("span", {
+    className: "bar"
+  }, React.createElement("i", {
+    style: {
+      width: s.health + '%'
+    },
+    className: meta.cls
+  }))), React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Temperature"), React.createElement("span", {
+    className: "sd-v"
+  }, React.createElement(AnimatedNumber, {
+    value: temp,
+    dec: 1
+  }), React.createElement("span", {
+    className: "unit"
+  }, "°C"))), React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, s.power < 0 ? 'Power output' : 'Power draw'), React.createElement("span", {
+    className: "sd-v"
+  }, React.createElement("span", {
+    className: "num"
+  }, fmtNum(Math.abs(s.power), 2)), React.createElement("span", {
+    className: "unit"
+  }, "kW"))), React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Last check"), React.createElement("span", {
+    className: "sd-v small num"
+  }, ago(now - s.checkedAt)))), React.createElement("dl", {
+    className: "kv"
+  }, s.metrics.map(([k, v]) => React.createElement("div", {
+    key: k
+  }, React.createElement("dt", null, k), React.createElement("dd", {
+    className: "num"
+  }, v)))), React.createElement("button", {
+    type: "button",
+    className: 'btn primary wide' + (s.running ? ' busy' : ''),
+    onClick: () => onRun(s.id),
+    disabled: s.running
+  }, s.running ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "spinner",
+    "aria-hidden": "true"
+  }), "Running diagnostic") : React.createElement(React.Fragment, null, React.createElement(Icon, {
+    name: "pulse",
+    size: 15
+  }), "Run diagnostic")), s.running && React.createElement("div", {
+    className: "indet",
+    "aria-hidden": "true"
+  }, React.createElement("i", null)));
+}
+function Spacecraft() {
+  const {
+    subs,
+    selectedSub,
+    setSelectedSub,
+    runDiagnostic
+  } = useMission();
+  const s = subs[selectedSub] || subs.propulsion;
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Spacecraft",
+    desc: "AETHER-7 Pathfinder. Select any part of the vehicle, or a row below, to inspect its subsystem."
+  }), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: "Vehicle",
+    instrument: true,
+    className: "s8",
+    bodyClass: "flush craft-body"
+  }, React.createElement(SpacecraftViewer, {
+    subs: subs,
+    selected: s.id,
+    onSelect: setSelectedSub
+  })), React.createElement(Panel, {
+    title: "Inspection",
+    instrument: true,
+    className: "s4"
+  }, React.createElement(SubsystemDetail, {
+    s: s,
+    onRun: runDiagnostic
+  }))), React.createElement(Panel, {
+    title: "All subsystems",
+    bodyClass: "flush"
+  }, React.createElement("div", {
+    className: "table-scroll"
+  }, React.createElement("table", {
+    className: "table sys-table"
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    scope: "col"
+  }, "Subsystem"), React.createElement("th", {
+    scope: "col"
+  }, "Status"), React.createElement("th", {
+    scope: "col"
+  }, "Health"), React.createElement("th", {
+    scope: "col"
+  }, "Temperature"), React.createElement("th", {
+    scope: "col"
+  }, "Power"), React.createElement("th", {
+    scope: "col"
+  }, React.createElement("span", {
+    className: "sr"
+  }, "Action")))), React.createElement("tbody", null, Object.values(subs).map(x => React.createElement("tr", {
+    key: x.id,
+    className: x.id === s.id ? 'current' : ''
+  }, React.createElement("th", {
+    scope: "row"
+  }, x.name), React.createElement("td", null, React.createElement(StatusPill, {
+    cls: STATUS_META[x.status].cls
+  }, STATUS_META[x.status].label)), React.createElement("td", null, React.createElement("span", {
+    className: "cell-bar"
+  }, React.createElement("span", {
+    className: "num"
+  }, x.health.toFixed(1), " %"), React.createElement("span", {
+    className: "bar"
+  }, React.createElement("i", {
+    style: {
+      width: x.health + '%'
+    },
+    className: STATUS_META[x.status].cls
+  })))), React.createElement("td", {
+    className: "num"
+  }, fmtNum(x.temp, 1), " °C"), React.createElement("td", {
+    className: "num"
+  }, x.power < 0 ? '+' : '', fmtNum(Math.abs(x.power), 2), " kW"), React.createElement("td", {
+    className: "right"
+  }, React.createElement("button", {
+    type: "button",
+    className: "btn sm",
+    onClick: () => setSelectedSub(x.id),
+    "aria-pressed": x.id === s.id
+  }, "Inspect")))))))));
+}
+function Telemetry() {
+  const {
+    values,
+    buffers,
+    tick
+  } = useTelemetry();
+  const [metric, setMetric] = useState('velocity');
+  const [range, setRange] = useState(RANGES[1]);
+  const stats = useMemo(() => {
+    const o = {};
+    METRIC_ORDER.forEach(k => {
+      const s = buffers.fine[k].slice(-150).map(p => p.v);
+      o[k] = {
+        min: Math.min(...s),
+        max: Math.max(...s)
+      };
+    });
+    return o;
+  }, [buffers, tick]);
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Telemetry",
+    desc: "Housekeeping channels refresh every 2 seconds. Select a channel to plot it."
+  }, React.createElement("span", {
+    className: "live"
+  }, React.createElement(StatusDot, {
+    cls: "ok",
+    pulse: true
+  }), "Live, 0.5 Hz")), React.createElement(TelemetryStrip, {
+    selected: metric,
+    onSelect: setMetric
+  }), React.createElement(TelemetryChart, {
+    metric: metric,
+    onMetric: setMetric,
+    range: range,
+    onRange: setRange,
+    height: 340,
+    title: "Channel history"
+  }), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: "Limits and ranges",
+    className: "s8",
+    bodyClass: "flush"
+  }, React.createElement("div", {
+    className: "table-scroll"
+  }, React.createElement("table", {
+    className: "table"
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", {
+    scope: "col"
+  }, "Channel"), React.createElement("th", {
+    scope: "col"
+  }, "Current"), React.createElement("th", {
+    scope: "col"
+  }, "5 min low"), React.createElement("th", {
+    scope: "col"
+  }, "5 min high"), React.createElement("th", {
+    scope: "col"
+  }, "Nominal range"), React.createElement("th", {
+    scope: "col"
+  }, "Status"))), React.createElement("tbody", null, METRIC_ORDER.map(k => {
+    const m = METRICS[k],
+      st = metricStatus(k, values[k]);
+    return React.createElement("tr", {
+      key: k,
+      className: metric === k ? 'current' : '',
+      onClick: () => setMetric(k)
+    }, React.createElement("th", {
+      scope: "row"
+    }, React.createElement("button", {
+      type: "button",
+      className: "linklike",
+      onClick: () => setMetric(k)
+    }, m.label)), React.createElement("td", {
+      className: "num"
+    }, fmtNum(values[k], m.dec), " ", m.unit), React.createElement("td", {
+      className: "num"
+    }, fmtNum(stats[k].min, m.dec)), React.createElement("td", {
+      className: "num"
+    }, fmtNum(stats[k].max, m.dec)), React.createElement("td", null, m.nominal), React.createElement("td", null, React.createElement(StatusPill, {
+      cls: st.cls
+    }, st.label)));
+  }))))), React.createElement(Panel, {
+    title: "Proximity radar",
+    instrument: true,
+    className: "s4",
+    aside: React.createElement("span", {
+      className: "meta num"
+    }, "Range 40,000 km")
+  }, React.createElement(Radar, null))));
+}
+function Avatar({
+  c,
+  size = 56
+}) {
+  return React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 56 56",
+    className: "avatar",
+    "aria-hidden": "true"
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: 'av-' + c.id,
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "1"
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: `hsl(${c.hue} 55% 38%)`
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: `hsl(${c.hue + 20} 60% 14%)`
+  }))), React.createElement("circle", {
+    cx: "28",
+    cy: "28",
+    r: "24",
+    fill: `url(#av-${c.id})`
+  }), React.createElement("ellipse", {
+    cx: "28",
+    cy: "28",
+    rx: "27",
+    ry: "9",
+    transform: "rotate(-28 28 28)",
+    className: "av-ring"
+  }), React.createElement("text", {
+    x: "28",
+    y: "33",
+    textAnchor: "middle"
+  }, c.initials));
+}
+function CrewCard({
+  c,
+  index
+}) {
+  const {
+    tick
+  } = useTelemetry();
+  const [open, setOpen] = useState(false);
+  const rng = mulberry32(tick * 31 + index);
+  const hr = Math.round(c.hr + Math.sin(tick * 0.5 + index) * 2 + (rng() - 0.5) * 2);
+  const hrHist = useMemo(() => Array.from({
+    length: 40
+  }).map((_, i) => c.hr + Math.sin((tick - 40 + i) * 0.5 + index) * 2 + (mulberry32((tick - 40 + i) * 31 + index)() - 0.5) * 2), [tick]);
+  const st = CREW_STATUS[c.status];
+  const bodyId = 'crew-more-' + c.id;
+  return React.createElement("article", {
+    className: 'panel crew-card' + (open ? ' open' : ''),
+    "aria-labelledby": 'crew-' + c.id
+  }, React.createElement("div", {
+    className: "cc-top"
+  }, React.createElement(Avatar, {
+    c: c
+  }), React.createElement("div", {
+    className: "cc-id"
+  }, React.createElement("span", {
+    className: "label"
+  }, c.role), React.createElement("h2", {
+    id: 'crew-' + c.id
+  }, c.name), React.createElement("span", {
+    className: "muted"
+  }, c.position))), React.createElement("div", {
+    className: "cc-row"
+  }, React.createElement(StatusPill, {
+    cls: st.cls
+  }, st.label), React.createElement("span", {
+    className: "cc-hr"
+  }, React.createElement("span", {
+    className: "num"
+  }, hr), " bpm")), React.createElement("div", {
+    className: "cc-task"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Current task"), React.createElement("span", null, c.task)), React.createElement("button", {
+    type: "button",
+    className: "btn sm cc-toggle",
+    "aria-expanded": open,
+    "aria-controls": bodyId,
+    onClick: () => setOpen(o => !o)
+  }, open ? 'Hide schedule' : 'Show schedule', React.createElement(Icon, {
+    name: "chevron",
+    size: 14,
+    className: open ? 'rot90' : ''
+  })), React.createElement("div", {
+    className: "cc-more",
+    id: bodyId,
+    hidden: !open
+  }, React.createElement("ol", {
+    className: "cc-tasks"
+  }, c.tasks.map(([t, s]) => React.createElement("li", {
+    key: t,
+    className: 't-' + s
+  }, React.createElement("span", {
+    className: "t-state"
+  }, s === 'done' ? 'Done' : s === 'now' ? 'Now' : 'Next'), t))), React.createElement("div", {
+    className: "cc-vitals"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Heart rate, last 80 s"), React.createElement(Sparkline, {
+    data: hrHist,
+    w: 200,
+    h: 30
+  })), React.createElement("div", {
+    className: "sit-row"
+  }, React.createElement("span", null, c.status === 'rest' ? 'Rest ends in' : 'Shift ends in'), React.createElement("span", {
+    className: "num"
+  }, Math.floor(c.shift / 60), " h ", c.shift % 60, " min"))));
+}
+function Crew() {
+  const counts = CREW.reduce((o, c) => (o[c.status] = (o[c.status] || 0) + 1, o), {});
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Crew",
+    desc: "Four aboard. Biomedical data is simulated from suit and cabin sensors."
+  }, React.createElement("dl", {
+    className: "inline-stats"
+  }, React.createElement("div", null, React.createElement("dt", null, "Active"), React.createElement("dd", {
+    className: "num"
+  }, counts.active || 0)), React.createElement("div", null, React.createElement("dt", null, "Standby"), React.createElement("dd", {
+    className: "num"
+  }, counts.standby || 0)), React.createElement("div", null, React.createElement("dt", null, "Resting"), React.createElement("dd", {
+    className: "num"
+  }, counts.rest || 0)))), React.createElement("div", {
+    className: "crew-grid"
+  }, CREW.map((c, i) => React.createElement(CrewCard, {
+    key: c.id,
+    c: c,
+    index: i
+  }))));
+}
+const QUICK = ['Request status report', 'Confirm LOI configuration', 'Go for lunar orbit insertion'];
+function SignalWave({
+  strength
+}) {
+  const reduced = useReducedMotion();
+  const amp = 4 + strength / 100 * 10;
+  let d = 'M0 20';
+  for (let x = 0; x <= 400; x += 4) d += `L${x} ${(20 + Math.sin(x / 11) * amp * Math.sin(x / 57 + 1)).toFixed(1)}`;
+  return React.createElement("svg", {
+    viewBox: "0 0 200 40",
+    preserveAspectRatio: "none",
+    className: "wave",
+    "aria-hidden": "true"
+  }, React.createElement("g", {
+    className: reduced ? '' : 'wave-move'
+  }, React.createElement("path", {
+    d: d
+  })));
+}
+function Communications() {
+  const {
+    messages,
+    sendMessage
+  } = useMission();
+  const {
+    values
+  } = useTelemetry();
+  const now = useNow();
+  const [channel, setChannel] = useState('all');
+  const [text, setText] = useState('');
+  const streamRef = useRef(null);
+  const inputRef = useRef(null);
+  const shown = channel === 'all' ? messages : messages.filter(m => m.src === channel);
+  const lastLen = useRef(0);
+  useEffect(() => {
+    const el = streamRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+    const own = messages.length && messages[messages.length - 1].own;
+    if (nearBottom || own || lastLen.current === 0) el.scrollTop = el.scrollHeight;
+    lastLen.current = messages.length;
+  }, [shown.length, messages]);
+  useEffect(() => {
+    const el = streamRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [channel]);
+  const send = t => {
+    const v = (t ?? text).trim();
+    if (!v) return;
+    sendMessage(v);
+    setText('');
+    if (channel !== 'all' && channel !== 'control') setChannel('all');
+    inputRef.current && inputRef.current.focus();
+  };
+  const bars = Math.round(values.signal / 100 * 5);
+  const counts = messages.reduce((o, m) => (o[m.src] = (o[m.src] || 0) + 1, o), {});
+  const handover = 3 * 3600 + 12 * 60 - Math.floor((now - T0) / 1000);
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Communications",
+    desc: "Mission voice loop transcript and uplink console. Messages you send travel with the real one-way light time to the Moon."
+  }, React.createElement("span", {
+    className: "live"
+  }, React.createElement(StatusDot, {
+    cls: "ok",
+    pulse: true
+  }), "Link established")), React.createElement("div", {
+    className: "comms-grid"
+  }, React.createElement("nav", {
+    className: "panel ch-list",
+    "aria-label": "Channels"
+  }, React.createElement("div", {
+    className: "panel-head"
+  }, React.createElement("h2", {
+    className: "label"
+  }, "Channels")), React.createElement("ul", null, [['all', 'All channels', messages.length], ...Object.entries(CHANNELS).map(([k, c]) => [k, c.label, counts[k] || 0])].map(([k, label, n]) => React.createElement("li", {
+    key: k
+  }, React.createElement("button", {
+    type: "button",
+    "aria-pressed": channel === k,
+    onClick: () => setChannel(k),
+    className: 'ch src-' + k
+  }, React.createElement("span", {
+    className: "ch-mark",
+    "aria-hidden": "true"
+  }), label, React.createElement("span", {
+    className: "num ch-n"
+  }, n)))))), React.createElement("section", {
+    className: "panel instrument console",
+    "aria-label": "Message stream"
+  }, React.createElement("div", {
+    className: "panel-head"
+  }, React.createElement("h2", {
+    className: "label"
+  }, channel === 'all' ? 'All channels' : CHANNELS[channel].label), React.createElement("span", {
+    className: "meta num"
+  }, "UTC ", fmtUTC(new Date(now)))), React.createElement("div", {
+    className: "stream",
+    ref: streamRef,
+    role: "log",
+    "aria-live": "polite",
+    "aria-relevant": "additions"
+  }, shown.map(m => React.createElement("div", {
+    key: m.id,
+    className: 'msg src-' + m.src + (m.own ? ' own' : '')
+  }, React.createElement("span", {
+    className: "num msg-t"
+  }, "[", fmtUTC(new Date(m.t)), "]"), React.createElement("span", {
+    className: "msg-src"
+  }, CHANNELS[m.src].label, m.own ? ' (you)' : ''), React.createElement("p", {
+    className: "msg-text"
+  }, m.text), m.own && React.createElement("span", {
+    className: 'msg-status ' + m.status
+  }, m.status === 'uplink' ? React.createElement(React.Fragment, null, "Uplinking", React.createElement("span", {
+    className: "dots",
+    "aria-hidden": "true"
+  }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null))) : React.createElement(React.Fragment, null, React.createElement(Icon, {
+    name: "check",
+    size: 12
+  }), "Delivered in 1.28 s")))), !shown.length && React.createElement("p", {
+    className: "empty"
+  }, "No traffic on this channel yet. Messages appear here as they arrive.")), React.createElement("div", {
+    className: "composer"
+  }, React.createElement("div", {
+    className: "quick",
+    role: "group",
+    "aria-label": "Quick messages"
+  }, QUICK.map(q => React.createElement("button", {
+    key: q,
+    type: "button",
+    className: "btn sm",
+    onClick: () => send(q)
+  }, q))), React.createElement("form", {
+    className: "compose-row",
+    onSubmit: e => {
+      e.preventDefault();
+      send();
+    }
+  }, React.createElement("label", {
+    htmlFor: "uplink",
+    className: "sr"
+  }, "Message to AETHER-7"), React.createElement("input", {
+    id: "uplink",
+    ref: inputRef,
+    value: text,
+    onChange: e => setText(e.target.value.slice(0, 280)),
+    placeholder: "Transmit as Mission Control",
+    autoComplete: "off"
+  }), React.createElement("span", {
+    className: "num char-n",
+    "aria-hidden": "true"
+  }, text.length, "/280"), React.createElement("button", {
+    type: "submit",
+    className: "btn primary",
+    disabled: !text.trim()
+  }, React.createElement(Icon, {
+    name: "send",
+    size: 15
+  }), "Transmit")))), React.createElement("aside", {
+    className: "panel link-panel",
+    "aria-label": "Link status"
+  }, React.createElement("div", {
+    className: "panel-head"
+  }, React.createElement("h2", {
+    className: "label"
+  }, "Link")), React.createElement("div", {
+    className: "panel-body"
+  }, React.createElement("div", {
+    className: "sig"
+  }, React.createElement("div", {
+    className: "sig-bars",
+    "aria-hidden": "true"
+  }, [1, 2, 3, 4, 5].map(i => React.createElement("i", {
+    key: i,
+    className: i <= bars ? 'on' : '',
+    style: {
+      height: 6 + i * 4
+    }
+  }))), React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "Signal strength"), React.createElement("div", {
+    className: "sig-v"
+  }, React.createElement(AnimatedNumber, {
+    value: values.signal,
+    dec: 1
+  }), React.createElement("span", {
+    className: "unit"
+  }, "%")))), React.createElement(SignalWave, {
+    strength: values.signal
+  }), React.createElement("dl", {
+    className: "kv"
+  }, React.createElement("div", null, React.createElement("dt", null, "Ground station"), React.createElement("dd", null, MISSION.station)), React.createElement("div", null, React.createElement("dt", null, "Band"), React.createElement("dd", null, "Ka, 26.5 GHz")), React.createElement("div", null, React.createElement("dt", null, "Downlink"), React.createElement("dd", {
+    className: "num"
+  }, "2.4 Mbps")), React.createElement("div", null, React.createElement("dt", null, "Uplink"), React.createElement("dd", {
+    className: "num"
+  }, "256 kbps")), React.createElement("div", null, React.createElement("dt", null, "One-way light time"), React.createElement("dd", {
+    className: "num"
+  }, "1.28 s")), React.createElement("div", null, React.createElement("dt", null, "Link margin"), React.createElement("dd", {
+    className: "num"
+  }, (3.2 + (values.signal - 98) * 0.4).toFixed(1), " dB")), React.createElement("div", null, React.createElement("dt", null, "Handover to ", MISSION.nextStation), React.createElement("dd", {
+    className: "num"
+  }, fmtDur(handover * 1000))))))));
+}
+function MissionLogs() {
+  const {
+    logs,
+    addLog
+  } = useMission();
+  const [filter, setFilter] = useState('all');
+  const [q, setQ] = useState('');
+  const [note, setNote] = useState('');
+  const counts = logs.reduce((o, l) => (o[l.cat] = (o[l.cat] || 0) + 1, o), {});
+  const items = logs.filter(l => (filter === 'all' || l.cat === filter) && (!q || (l.title + ' ' + l.detail).toLowerCase().includes(q.toLowerCase())));
+  const opts = [{
+    id: 'all',
+    label: `All ${logs.length}`
+  }, ...Object.entries(LOG_CATS).map(([k, c]) => ({
+    id: k,
+    label: `${c.label} ${counts[k] || 0}`
+  }))];
+  const addNote = e => {
+    e.preventDefault();
+    const v = note.trim();
+    if (!v) return;
+    addLog('system', 'Operator note', v);
+    setNote('');
+  };
+  return React.createElement("div", {
+    className: "page"
+  }, React.createElement(PageHead, {
+    title: "Mission logs",
+    desc: "Chronological record of events, newest first. Times are UTC."
+  }), React.createElement("div", {
+    className: "log-tools"
+  }, React.createElement("div", {
+    className: "seg-scroll"
+  }, React.createElement(Segmented, {
+    options: opts,
+    value: filter,
+    onChange: setFilter,
+    label: "Filter by category"
+  })), React.createElement("div", {
+    className: "search-box"
+  }, React.createElement(Icon, {
+    name: "search",
+    size: 15
+  }), React.createElement("label", {
+    htmlFor: "logq",
+    className: "sr"
+  }, "Search logs"), React.createElement("input", {
+    id: "logq",
+    value: q,
+    onChange: e => setQ(e.target.value),
+    placeholder: "Search events",
+    autoComplete: "off"
+  }))), React.createElement("div", {
+    className: "g"
+  }, React.createElement(Panel, {
+    title: `${items.length} ${items.length === 1 ? 'event' : 'events'}`,
+    className: "s8"
+  }, React.createElement(MissionTimeline, {
+    items: items,
+    empty: q ? `No events match \u201c${q}\u201d. Try a shorter search or another category.` : undefined
+  })), React.createElement("div", {
+    className: "s4 stack"
+  }, React.createElement(Panel, {
+    title: "Add operator note"
+  }, React.createElement("form", {
+    onSubmit: addNote,
+    className: "note-form"
+  }, React.createElement("label", {
+    htmlFor: "note",
+    className: "sr"
+  }, "Note"), React.createElement("textarea", {
+    id: "note",
+    rows: 3,
+    value: note,
+    onChange: e => setNote(e.target.value.slice(0, 240)),
+    placeholder: "Record an observation for the flight log"
+  }), React.createElement("button", {
+    type: "submit",
+    className: "btn primary wide",
+    disabled: !note.trim()
+  }, React.createElement(Icon, {
+    name: "note",
+    size: 15
+  }), "Add to log"))), React.createElement(Panel, {
+    title: "By category"
+  }, React.createElement("ul", {
+    className: "cat-bars"
+  }, Object.entries(LOG_CATS).map(([k, c]) => React.createElement("li", {
+    key: k
+  }, React.createElement("button", {
+    type: "button",
+    className: "cat-row",
+    onClick: () => setFilter(k),
+    "aria-pressed": filter === k
+  }, React.createElement("span", {
+    className: 'cat-sw cat-' + k,
+    "aria-hidden": "true"
+  }), c.label, React.createElement("span", {
+    className: "bar"
+  }, React.createElement("i", {
+    style: {
+      width: (counts[k] || 0) / Math.max(1, logs.length) * 100 + '%'
+    },
+    className: 'cat-' + k
+  })), React.createElement("span", {
+    className: "num"
+  }, counts[k] || 0)))))))));
+}
+const NAV = [{
+  id: 'overview',
+  label: 'Overview',
+  icon: 'overview'
+}, {
+  id: 'orbit',
+  label: 'Orbit',
+  icon: 'orbit'
+}, {
+  id: 'spacecraft',
+  label: 'Spacecraft',
+  icon: 'craft'
+}, {
+  id: 'telemetry',
+  label: 'Telemetry',
+  icon: 'activity'
+}, {
+  id: 'crew',
+  label: 'Crew',
+  icon: 'users'
+}, {
+  id: 'comms',
+  label: 'Comms',
+  icon: 'radio'
+}, {
+  id: 'logs',
+  label: 'Logs',
+  icon: 'list'
+}];
+const PAGES = {
+  overview: Overview,
+  orbit: Orbit,
+  spacecraft: Spacecraft,
+  telemetry: Telemetry,
+  crew: Crew,
+  comms: Communications,
+  logs: MissionLogs
+};
+function readRoute() {
+  const h = (window.location.hash || '').replace(/^#\/?/, '');
+  return PAGES[h] ? h : 'overview';
+}
+function useHashRoute() {
+  const [route, setRoute] = useState(readRoute);
+  useEffect(() => {
+    const f = () => setRoute(readRoute());
+    window.addEventListener('hashchange', f);
+    return () => window.removeEventListener('hashchange', f);
+  }, []);
+  const navigate = useCallback(id => {
+    if (window.location.hash !== '#/' + id) window.location.hash = '#/' + id;
+    setRoute(id);
+  }, []);
+  return [route, navigate];
+}
+function UTCClock({
+  className = ''
+}) {
+  const now = useNow();
+  return React.createElement("time", {
+    className: 'num ' + className,
+    dateTime: new Date(now).toISOString()
+  }, fmtUTC(new Date(now)));
+}
+function TopBar({
+  collapsed,
+  onToggleSidebar,
+  onPalette,
+  onAlerts,
+  unread
+}) {
+  const now = useNow();
+  const {
+    alerts
+  } = useMission();
+  const critical = alerts.some(a => a.level === 'critical');
+  return React.createElement("header", {
+    className: "topbar"
+  }, React.createElement("button", {
+    type: "button",
+    className: "btn icon ghost sb-toggle",
+    onClick: onToggleSidebar,
+    "aria-label": collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+    "aria-expanded": !collapsed,
+    title: "Toggle sidebar"
+  }, React.createElement(Icon, {
+    name: "panel"
+  })), React.createElement("div", {
+    className: "brand",
+    "aria-label": "AETHER mission control"
+  }, React.createElement("svg", {
+    viewBox: "0 0 32 32",
+    width: "26",
+    height: "26",
+    "aria-hidden": "true",
+    className: "brand-mark"
+  }, React.createElement("circle", {
+    cx: "16",
+    cy: "16",
+    r: "4.5"
+  }), React.createElement("ellipse", {
+    cx: "16",
+    cy: "16",
+    rx: "14",
+    ry: "6",
+    transform: "rotate(-28 16 16)"
+  }), React.createElement("circle", {
+    cx: "27.4",
+    cy: "10",
+    r: "1.8",
+    className: "bm-dot"
+  })), React.createElement("span", {
+    className: "brand-word"
+  }, "AETHER"), React.createElement("span", {
+    className: "brand-sub"
+  }, "Mission control")), React.createElement("div", {
+    className: "tb-mission"
+  }, React.createElement("span", {
+    className: "num"
+  }, MISSION.code), React.createElement("span", {
+    className: "tb-name"
+  }, MISSION.name), React.createElement(StatusPill, {
+    cls: critical ? 'crit' : 'ok'
+  }, critical ? 'Critical' : 'Nominal')), React.createElement("div", {
+    className: "tb-right"
+  }, React.createElement("button", {
+    type: "button",
+    className: "cmdk",
+    onClick: onPalette,
+    "aria-label": "Open command palette",
+    "aria-keyshortcuts": "Control+K"
+  }, React.createElement(Icon, {
+    name: "search",
+    size: 15
+  }), React.createElement("span", {
+    className: "cmdk-text"
+  }, "Search AETHER"), React.createElement("kbd", null, "Ctrl K")), React.createElement("button", {
+    type: "button",
+    className: "btn icon ghost bell",
+    onClick: onAlerts,
+    "aria-label": `Alerts, ${unread} unread`
+  }, React.createElement(Icon, {
+    name: "bell"
+  }), unread > 0 && React.createElement("span", {
+    className: "badge num",
+    "aria-hidden": "true"
+  }, unread)), React.createElement("div", {
+    className: "tb-clocks"
+  }, React.createElement("div", null, React.createElement("span", {
+    className: "label"
+  }, "UTC"), React.createElement(UTCClock, null)), React.createElement("div", {
+    className: "hide-md"
+  }, React.createElement("span", {
+    className: "label"
+  }, "MET"), React.createElement("span", {
+    className: "num"
+  }, fmtMET(now - LAUNCH_AT))))));
+}
+function Sidebar({
+  route,
+  navigate,
+  collapsed,
+  onToggle
+}) {
+  const now = useNow();
+  const {
+    alerts
+  } = useMission();
+  return React.createElement("nav", {
+    className: "sidebar",
+    "aria-label": "Primary"
+  }, React.createElement("ul", {
+    className: "nav"
+  }, NAV.map(n => React.createElement("li", {
+    key: n.id
+  }, React.createElement("a", {
+    href: '#/' + n.id,
+    className: 'nav-item' + (route === n.id ? ' active' : ''),
+    "aria-current": route === n.id ? 'page' : undefined,
+    onClick: e => {
+      e.preventDefault();
+      navigate(n.id);
+    },
+    title: collapsed ? n.label : undefined
+  }, React.createElement(Icon, {
+    name: n.icon
+  }), React.createElement("span", {
+    className: "nav-label"
+  }, n.label), n.id === 'spacecraft' && React.createElement("span", {
+    className: "nav-flag warn",
+    "aria-label": "1 caution"
+  }))))), React.createElement("div", {
+    className: "sb-foot"
+  }, React.createElement("div", {
+    className: "sb-event"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Next event"), React.createElement("span", {
+    className: "sb-ev-name"
+  }, "LOI burn"), React.createElement("span", {
+    className: "num sb-ev-t"
+  }, "T−", fmtDur(LOI_AT - now))), React.createElement("button", {
+    type: "button",
+    className: "btn ghost sb-collapse",
+    onClick: onToggle,
+    "aria-label": collapsed ? 'Expand sidebar' : 'Collapse sidebar'
+  }, React.createElement(Icon, {
+    name: "panel",
+    size: 16
+  }), React.createElement("span", {
+    className: "nav-label"
+  }, collapsed ? 'Expand' : 'Collapse'))));
+}
+function StatusBar() {
+  const {
+    values
+  } = useTelemetry();
+  const {
+    alerts,
+    subs
+  } = useMission();
+  const critical = alerts.some(a => a.level === 'critical');
+  const cautions = Object.values(subs).filter(s => s.status === 'warning').length;
+  return React.createElement("footer", {
+    className: "statusbar",
+    "aria-label": "System status"
+  }, React.createElement("div", {
+    className: "sb-item"
+  }, React.createElement("span", {
+    className: "label"
+  }, "System"), React.createElement(StatusDot, {
+    cls: critical ? 'crit' : 'ok'
+  }), React.createElement("span", null, critical ? 'Critical' : 'Nominal'), cautions > 0 && React.createElement("span", {
+    className: "warn-t"
+  }, cautions, " caution")), React.createElement("div", {
+    className: "sb-item"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Power"), React.createElement(AnimatedNumber, {
+    value: values.power,
+    dec: 1
+  }), React.createElement("span", {
+    className: "u"
+  }, "%")), React.createElement("div", {
+    className: "sb-item"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Signal"), React.createElement(AnimatedNumber, {
+    value: values.signal,
+    dec: 1
+  }), React.createElement("span", {
+    className: "u"
+  }, "%")), React.createElement("div", {
+    className: "sb-item"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Network"), React.createElement(StatusDot, {
+    cls: "ok"
+  }), React.createElement("span", null, "Connected")), React.createElement("div", {
+    className: "sb-item hide-md"
+  }, React.createElement("span", {
+    className: "label"
+  }, "Station"), React.createElement("span", null, MISSION.station)), React.createElement("div", {
+    className: "sb-item sb-end"
+  }, React.createElement("span", {
+    className: "label"
+  }, "UTC"), React.createElement(UTCClock, null)));
+}
+function BottomNav({
+  route,
+  navigate,
+  onMore,
+  moreOpen
+}) {
+  const primary = NAV.slice(0, 4);
+  const inMore = !primary.some(n => n.id === route);
+  return React.createElement("nav", {
+    className: "bottomnav",
+    "aria-label": "Primary"
+  }, primary.map(n => React.createElement("a", {
+    key: n.id,
+    href: '#/' + n.id,
+    className: route === n.id ? 'active' : '',
+    "aria-current": route === n.id ? 'page' : undefined,
+    onClick: e => {
+      e.preventDefault();
+      navigate(n.id);
+    }
+  }, React.createElement(Icon, {
+    name: n.icon,
+    size: 20
+  }), React.createElement("span", null, n.label))), React.createElement("button", {
+    type: "button",
+    className: inMore ? 'active' : '',
+    onClick: onMore,
+    "aria-expanded": moreOpen,
+    "aria-haspopup": "dialog"
+  }, React.createElement(Icon, {
+    name: "more",
+    size: 20
+  }), React.createElement("span", null, "More")));
+}
+function useDialog(open, onClose) {
+  const ref = useRef(null);
+  const prev = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    prev.current = document.activeElement;
+    const t = setTimeout(() => {
+      const el = ref.current && (ref.current.querySelector('[data-autofocus]') || ref.current.querySelector('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])'));
+      el && el.focus();
+    }, 30);
+    const onKey = e => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+      if (e.key === 'Tab' && ref.current) {
+        const f = [...ref.current.querySelectorAll('button:not([disabled]), [href], input, textarea, [tabindex]:not([tabindex="-1"])')];
+        if (!f.length) return;
+        const first = f[0],
+          last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('keydown', onKey);
+      prev.current && prev.current.focus && prev.current.focus();
+    };
+  }, [open]);
+  return ref;
+}
+function MoreSheet({
+  open,
+  onClose,
+  route,
+  navigate,
+  onPalette,
+  onAlerts,
+  unread
+}) {
+  const ref = useDialog(open, onClose);
+  if (!open) return null;
+  return React.createElement("div", {
+    className: "scrim",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "sheet",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "More sections",
+    ref: ref,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "sheet-grip",
+    "aria-hidden": "true"
+  }), React.createElement("ul", null, NAV.slice(4).map(n => React.createElement("li", {
+    key: n.id
+  }, React.createElement("a", {
+    href: '#/' + n.id,
+    className: route === n.id ? 'active' : '',
+    "aria-current": route === n.id ? 'page' : undefined,
+    onClick: e => {
+      e.preventDefault();
+      navigate(n.id);
+      onClose();
+    }
+  }, React.createElement(Icon, {
+    name: n.icon
+  }), n.label))), React.createElement("li", null, React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      onClose();
+      onAlerts();
+    }
+  }, React.createElement(Icon, {
+    name: "bell"
+  }), "Alerts", unread > 0 && React.createElement("span", {
+    className: "badge num"
+  }, unread))), React.createElement("li", null, React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      onClose();
+      onPalette();
+    }
+  }, React.createElement(Icon, {
+    name: "search"
+  }), "Search AETHER")))));
+}
+const LEVEL_META = {
+  info: {
+    label: 'Info',
+    icon: 'info',
+    cls: 'info'
+  },
+  warning: {
+    label: 'Warning',
+    icon: 'warn',
+    cls: 'warn'
+  },
+  critical: {
+    label: 'Critical',
+    icon: 'crit',
+    cls: 'crit'
+  }
+};
+function AlertDrawer({
+  open,
+  onClose,
+  navigate
+}) {
+  const {
+    alerts,
+    alertActions,
+    setSelectedSub
+  } = useMission();
+  const now = useNow();
+  const [tab, setTab] = useState('all');
+  const ref = useDialog(open, onClose);
+  const list = tab === 'unread' ? alerts.filter(a => !a.read) : alerts;
+  const unread = alerts.filter(a => !a.read).length;
+  return React.createElement("div", {
+    className: 'drawer-wrap' + (open ? ' open' : ''),
+    "aria-hidden": !open,
+    inert: !open ? '' : undefined
+  }, React.createElement("div", {
+    className: "scrim",
+    onClick: onClose
+  }), React.createElement("aside", {
+    className: "drawer",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-labelledby": "alerts-title",
+    ref: ref
+  }, React.createElement("div", {
+    className: "drawer-head"
+  }, React.createElement("h2", {
+    id: "alerts-title"
+  }, "Alerts"), React.createElement("button", {
+    type: "button",
+    className: "btn icon ghost",
+    onClick: onClose,
+    "aria-label": "Close alerts",
+    "data-autofocus": true
+  }, React.createElement(Icon, {
+    name: "x"
+  }))), React.createElement("div", {
+    className: "drawer-tools"
+  }, React.createElement(Segmented, {
+    options: [{
+      id: 'all',
+      label: `All ${alerts.length}`
+    }, {
+      id: 'unread',
+      label: `Unread ${unread}`
+    }],
+    value: tab,
+    onChange: setTab,
+    label: "Show",
+    size: "sm"
+  }), React.createElement("button", {
+    type: "button",
+    className: "btn sm",
+    onClick: alertActions.markAllRead,
+    disabled: !unread
+  }, "Mark all as read")), React.createElement("ul", {
+    className: "alert-list"
+  }, list.map(a => {
+    const lm = LEVEL_META[a.level];
+    return React.createElement("li", {
+      key: a.id,
+      className: 'alert ' + lm.cls + (a.read ? ' read' : '')
+    }, React.createElement(Icon, {
+      name: lm.icon,
+      size: 18,
+      className: "al-icon"
+    }), React.createElement("div", {
+      className: "al-body"
+    }, React.createElement("div", {
+      className: "al-top"
+    }, React.createElement("span", {
+      className: "al-level"
+    }, lm.label), React.createElement("time", {
+      className: "num"
+    }, fmtUTC(new Date(a.t)), ", ", ago(now - a.t))), React.createElement("h3", null, a.title), React.createElement("p", null, a.detail), React.createElement("div", {
+      className: "al-actions"
+    }, a.system && React.createElement("button", {
+      type: "button",
+      className: "btn sm",
+      onClick: () => {
+        setSelectedSub(a.system);
+        alertActions.markRead(a.id);
+        navigate('spacecraft');
+        onClose();
+      }
+    }, "Inspect ", SUBSYSTEMS_SEED.find(s => s.id === a.system).name.toLowerCase()), !a.read && React.createElement("button", {
+      type: "button",
+      className: "btn sm ghost",
+      onClick: () => alertActions.markRead(a.id)
+    }, React.createElement(Icon, {
+      name: "check",
+      size: 13
+    }), "Mark as read"), React.createElement("button", {
+      type: "button",
+      className: "btn sm ghost",
+      onClick: () => alertActions.dismiss(a.id)
+    }, "Dismiss"))), !a.read && React.createElement("span", {
+      className: "unread-dot",
+      "aria-label": "Unread"
+    }));
+  }), !list.length && React.createElement("li", {
+    className: "empty"
+  }, tab === 'unread' ? 'Everything is read. New alerts will appear here as they are raised.' : 'No active alerts. New alerts will appear here as they are raised.'))));
+}
+function Toasts({
+  onView
+}) {
+  const {
+    toasts,
+    dismissToast
+  } = useMission();
+  return React.createElement("div", {
+    className: "toasts",
+    role: "status",
+    "aria-live": "polite"
+  }, toasts.map(t => {
+    const lm = LEVEL_META[t.level] || LEVEL_META.info;
+    return React.createElement("div", {
+      key: t.id,
+      className: 'toast ' + lm.cls
+    }, React.createElement(Icon, {
+      name: lm.icon,
+      size: 17,
+      className: "al-icon"
+    }), React.createElement("div", {
+      className: "toast-body"
+    }, React.createElement("strong", null, t.title), t.detail && React.createElement("span", null, t.detail), t.kind === 'alert' && React.createElement("button", {
+      type: "button",
+      className: "linklike",
+      onClick: () => {
+        dismissToast(t.id);
+        onView();
+      }
+    }, "View in alert center")), React.createElement("button", {
+      type: "button",
+      className: "btn icon ghost sm",
+      onClick: () => dismissToast(t.id),
+      "aria-label": "Dismiss notification"
+    }, React.createElement(Icon, {
+      name: "x",
+      size: 14
+    })));
+  }));
+}
+function CommandPalette({
+  open,
+  onClose,
+  commands
+}) {
+  const [q, setQ] = useState('');
+  const [idx, setIdx] = useState(0);
+  const ref = useDialog(open, onClose);
+  useEffect(() => {
+    if (open) {
+      setQ('');
+      setIdx(0);
+    }
+  }, [open]);
+  const items = commands.filter(c => (c.label + ' ' + (c.keywords || '')).toLowerCase().includes(q.trim().toLowerCase()));
+  useEffect(() => {
+    setIdx(0);
+  }, [q]);
+  if (!open) return null;
+  const run = c => {
+    onClose();
+    setTimeout(c.run, 0);
+  };
+  const onKey = e => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIdx(i => items.length ? (i + 1) % items.length : 0);
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIdx(i => items.length ? (i - 1 + items.length) % items.length : 0);
+    }
+    if (e.key === 'Enter' && items[idx]) {
+      e.preventDefault();
+      run(items[idx]);
+    }
+  };
+  return React.createElement("div", {
+    className: "scrim palette-scrim",
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "palette",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Command palette",
+    ref: ref,
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "pal-input"
+  }, React.createElement(Icon, {
+    name: "search",
+    size: 17
+  }), React.createElement("input", {
+    "data-autofocus": true,
+    value: q,
+    onChange: e => setQ(e.target.value),
+    onKeyDown: onKey,
+    placeholder: "Search AETHER",
+    role: "combobox",
+    "aria-expanded": "true",
+    "aria-controls": "pal-list",
+    "aria-activedescendant": items[idx] ? 'pal-' + items[idx].id : undefined,
+    "aria-label": "Search commands"
+  }), React.createElement("kbd", null, "Esc")), React.createElement("ul", {
+    id: "pal-list",
+    role: "listbox",
+    className: "pal-list",
+    "aria-label": "Commands"
+  }, items.map((c, i) => React.createElement("li", {
+    key: c.id,
+    id: 'pal-' + c.id,
+    role: "option",
+    "aria-selected": i === idx,
+    className: i === idx ? 'on' : '',
+    onMouseEnter: () => setIdx(i),
+    onClick: () => run(c)
+  }, React.createElement(Icon, {
+    name: c.icon,
+    size: 16
+  }), React.createElement("span", {
+    className: "pal-label"
+  }, c.label), React.createElement("span", {
+    className: "pal-group"
+  }, c.group))), !items.length && React.createElement("li", {
+    className: "empty"
+  }, "No commands match “", q, "”. Try “orbit” or “alerts”.")), React.createElement("div", {
+    className: "pal-foot"
+  }, React.createElement("span", null, React.createElement("kbd", null, "↑"), React.createElement("kbd", null, "↓"), " to move"), React.createElement("span", null, React.createElement("kbd", null, "Enter"), " to run"))));
+}
+const BOOT_LINES = ['Core system', 'Navigation', 'Telemetry', 'Communication', 'Orbital system', 'Crew interface'];
+function Boot({
+  onDone
+}) {
+  const reduced = useReducedMotion();
+  const [n, setN] = useState(0);
+  const [pct, setPct] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const done = useRef(false);
+  const finish = useCallback(() => {
+    if (done.current) return;
+    done.current = true;
+    setLeaving(true);
+    setTimeout(onDone, reduced ? 60 : 700);
+  }, [onDone, reduced]);
+  useEffect(() => {
+    const step = reduced ? 80 : 330;
+    const timers = BOOT_LINES.map((_, i) => setTimeout(() => setN(i + 1), 450 + step * (i + 1)));
+    const total = 450 + step * (BOOT_LINES.length + 1);
+    const t0 = performance.now();
+    let raf;
+    const f = t => {
+      const k = Math.min(1, (t - t0) / total);
+      setPct(Math.round(k * 100));
+      if (k < 1) raf = requestAnimationFrame(f);else {
+        setReady(true);
+        timers.push(setTimeout(finish, reduced ? 250 : 900));
+      }
+    };
+    raf = requestAnimationFrame(f);
+    return () => {
+      timers.forEach(clearTimeout);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+  useEffect(() => {
+    const k = e => {
+      if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') {
+        e.preventDefault();
+        finish();
+      }
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [finish]);
+  const segs = 24,
+    on = Math.round(pct / 100 * segs);
+  return React.createElement("div", {
+    className: 'boot' + (leaving ? ' out' : ''),
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "System initialization"
+  }, React.createElement("div", {
+    className: "boot-inner"
+  }, React.createElement("div", {
+    className: "boot-mark",
+    "aria-hidden": "true"
+  }, React.createElement("svg", {
+    viewBox: "0 0 200 200"
+  }, React.createElement("ellipse", {
+    cx: "100",
+    cy: "100",
+    rx: "96",
+    ry: "34",
+    transform: "rotate(-24 100 100)"
+  }), React.createElement("circle", {
+    cx: "100",
+    cy: "100",
+    r: "3"
+  }))), React.createElement("div", {
+    className: "boot-word"
+  }, "AETHER"), React.createElement("div", {
+    className: "boot-sub"
+  }, "Advanced exploration and telemetry command system"), React.createElement("div", {
+    className: "boot-state num",
+    "aria-live": "polite"
+  }, ready ? 'System ready' : 'Initializing'), React.createElement("ul", {
+    className: "boot-lines num"
+  }, BOOT_LINES.map((l, i) => React.createElement("li", {
+    key: l,
+    className: i < n ? 'on' : ''
+  }, React.createElement("span", null, l), React.createElement("span", {
+    className: "leader",
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "st"
+  }, i < n ? 'Online' : 'Pending')))), React.createElement("div", {
+    className: "boot-bar",
+    role: "progressbar",
+    "aria-valuenow": pct,
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    "aria-label": "Initialization progress"
+  }, Array.from({
+    length: segs
+  }).map((_, i) => React.createElement("i", {
+    key: i,
+    className: i < on ? 'on' : ''
+  })), React.createElement("span", {
+    className: "num"
+  }, pct, "%"))), React.createElement("div", {
+    className: "boot-foot num"
+  }, React.createElement("span", null, MISSION.code, " ", MISSION.vehicle, " build 7.4.2"), React.createElement("button", {
+    type: "button",
+    className: "btn sm ghost",
+    onClick: finish
+  }, "Skip sequence ", React.createElement("kbd", null, "Enter"))));
+}
+function Shell({
+  booting,
+  replayBoot
+}) {
+  const [route, navigate] = useHashRoute();
+  const [collapsed, setCollapsed] = useState(false);
+  const [palette, setPalette] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [more, setMore] = useState(false);
+  const {
+    alerts
+  } = useMission();
+  const unread = alerts.filter(a => !a.read).length;
+  const mainRef = useRef(null);
+  const first = useRef(true);
+  useEffect(() => {
+    const k = e => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        if (booting) return;
+        e.preventDefault();
+        setPalette(p => !p);
+      }
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [booting]);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    const h = mainRef.current && mainRef.current.querySelector('h1');
+    h && h.focus({
+      preventScroll: true
+    });
+  }, [route]);
+  const commands = useMemo(() => [{
+    id: 'go-telemetry',
+    label: 'Navigate to telemetry',
+    group: 'Go to',
+    icon: 'activity',
+    run: () => navigate('telemetry'),
+    keywords: 'charts data'
+  }, {
+    id: 'go-spacecraft',
+    label: 'Open spacecraft',
+    group: 'Go to',
+    icon: 'craft',
+    run: () => navigate('spacecraft'),
+    keywords: 'vehicle subsystems'
+  }, {
+    id: 'go-orbit',
+    label: 'View orbit',
+    group: 'Go to',
+    icon: 'orbit',
+    run: () => navigate('orbit'),
+    keywords: 'trajectory map'
+  }, {
+    id: 'go-comms',
+    label: 'Open communications',
+    group: 'Go to',
+    icon: 'radio',
+    run: () => navigate('comms'),
+    keywords: 'messages radio'
+  }, {
+    id: 'go-logs',
+    label: 'Mission logs',
+    group: 'Go to',
+    icon: 'list',
+    run: () => navigate('logs'),
+    keywords: 'events timeline'
+  }, {
+    id: 'go-crew',
+    label: 'Open crew',
+    group: 'Go to',
+    icon: 'users',
+    run: () => navigate('crew'),
+    keywords: 'astronauts'
+  }, {
+    id: 'go-overview',
+    label: 'Mission overview',
+    group: 'Go to',
+    icon: 'overview',
+    run: () => navigate('overview'),
+    keywords: 'dashboard home'
+  }, {
+    id: 'status',
+    label: 'System status',
+    group: 'Go to',
+    icon: 'pulse',
+    run: () => navigate('spacecraft'),
+    keywords: 'health'
+  }, {
+    id: 'alerts',
+    label: 'Open alert center',
+    group: 'Action',
+    icon: 'bell',
+    run: () => setAlertsOpen(true),
+    keywords: 'notifications warnings'
+  }, {
+    id: 'sidebar',
+    label: collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+    group: 'Action',
+    icon: 'panel',
+    run: () => setCollapsed(c => !c)
+  }, {
+    id: 'boot',
+    label: 'Replay boot sequence',
+    group: 'Action',
+    icon: 'play',
+    run: replayBoot,
+    keywords: 'initialize startup'
+  }], [navigate, collapsed, replayBoot]);
+  const Page = PAGES[route];
+  return React.createElement("div", {
+    className: 'shell' + (collapsed ? ' collapsed' : ''),
+    "aria-hidden": booting ? 'true' : undefined,
+    inert: booting ? '' : undefined
+  }, React.createElement("a", {
+    href: "#main",
+    className: "skip",
+    onClick: e => {
+      e.preventDefault();
+      mainRef.current && mainRef.current.focus();
+    }
+  }, "Skip to content"), React.createElement(TopBar, {
+    collapsed: collapsed,
+    onToggleSidebar: () => setCollapsed(c => !c),
+    onPalette: () => setPalette(true),
+    onAlerts: () => setAlertsOpen(true),
+    unread: unread
+  }), React.createElement(Sidebar, {
+    route: route,
+    navigate: navigate,
+    collapsed: collapsed,
+    onToggle: () => setCollapsed(c => !c)
+  }), React.createElement("main", {
+    className: "main",
+    id: "main",
+    ref: mainRef,
+    tabIndex: -1
+  }, React.createElement("div", {
+    key: route,
+    className: "page-wrap"
+  }, React.createElement(Page, {
+    navigate: navigate
+  }))), React.createElement(StatusBar, null), React.createElement(BottomNav, {
+    route: route,
+    navigate: navigate,
+    onMore: () => setMore(true),
+    moreOpen: more
+  }), React.createElement(MoreSheet, {
+    open: more,
+    onClose: () => setMore(false),
+    route: route,
+    navigate: navigate,
+    onPalette: () => setPalette(true),
+    onAlerts: () => setAlertsOpen(true),
+    unread: unread
+  }), React.createElement(AlertDrawer, {
+    open: alertsOpen,
+    onClose: () => setAlertsOpen(false),
+    navigate: navigate
+  }), React.createElement(CommandPalette, {
+    open: palette,
+    onClose: () => setPalette(false),
+    commands: commands
+  }), React.createElement(Toasts, {
+    onView: () => setAlertsOpen(true)
+  }));
+}
+function App() {
+  const [booting, setBooting] = useState(() => {
+    try {
+      return sessionStorage.getItem('aether-booted') !== '1';
+    } catch (e) {
+      return true;
+    }
+  });
+  const done = useCallback(() => {
+    setBooting(false);
+    try {
+      sessionStorage.setItem('aether-booted', '1');
+    } catch (e) {}
+  }, []);
+  const replay = useCallback(() => setBooting(true), []);
+  return React.createElement(TimeProvider, null, React.createElement(TelemetryProvider, null, React.createElement(MissionProvider, {
+    active: !booting
+  }, React.createElement(Starfield, null), React.createElement(Shell, {
+    booting: booting,
+    replayBoot: replay
+  }), booting && React.createElement(Boot, {
+    onDone: done
+  }))));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, null));
+})();
+</script>
+</body>
+</html>

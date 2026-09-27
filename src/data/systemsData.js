@@ -1,0 +1,30 @@
+export const SUBSYSTEMS_SEED = [
+  { id: 'propulsion', name: 'Propulsion', status: 'nominal', health: 97.8, temp: 284, power: 0.42, checked: 18,
+    desc: 'Main engine and reaction control. Armed for lunar orbit insertion.',
+    metrics: [['Thrust availability', '98.4 %'], ['Chamber pressure', '1.02 MPa'], ['Oxidizer remaining', '72.9 %'], ['Burns completed', '6 of 8']] },
+  { id: 'navigation', name: 'Navigation', status: 'nominal', health: 99.1, temp: 21.4, power: 0.18, checked: 9,
+    desc: 'Star trackers, inertial units and optical navigation camera.',
+    metrics: [['Star trackers', '2 of 2 locked'], ['Attitude error', '0.004°'], ['IMU drift', '0.0021 °/h'], ['Last optical fix', 'Image 1142']] },
+  { id: 'comms', name: 'Communications', status: 'nominal', health: 98.2, temp: 34.8, power: 0.61, checked: 12,
+    desc: 'High-gain Ka-band antenna with X-band backup.',
+    metrics: [['Downlink', '2.4 Mbps'], ['Uplink', '256 kbps'], ['One-way light time', '1.26 s'], ['Bands', 'Ka primary, X backup']] },
+  { id: 'power', name: 'Power', status: 'nominal', health: 96.4, temp: 18.2, power: -6.8, checked: 26,
+    desc: 'Twin solar arrays, lithium-ion battery bank and main bus.',
+    metrics: [['Array output', '6.8 kW'], ['Battery charge', '91 %'], ['Bus voltage', '120.2 V'], ['Array sun angle', '2.1°']] },
+  { id: 'thermal', name: 'Thermal', status: 'warning', health: 81.3, temp: 38.6, power: 0.34, checked: 52,
+    desc: 'Radiator loops A and B, heaters and louvres.',
+    metrics: [['Loop A', '24.1 °C'], ['Loop B', '38.6 °C of 40.0 limit'], ['Loop B flow', '112 %'], ['Heater zones on', '4 of 11']] },
+  { id: 'lifesupport', name: 'Life support', status: 'nominal', health: 99.4, temp: 22.1, power: 0.88, checked: 6,
+    desc: 'Cabin atmosphere, water recovery and CO\u2082 removal.',
+    metrics: [['Cabin pressure', '101.2 kPa'], ['Oxygen', '20.9 %'], ['CO\u2082 partial pressure', '0.31 kPa'], ['Humidity', '46 %']] },
+  { id: 'payload', name: 'Payload', status: 'standby', health: 97.0, temp: -8.4, power: 0.09, checked: 41,
+    desc: 'Lunar mapping camera and gamma-ray spectrometer, held for science orbit.',
+    metrics: [['Lunar mapper', 'Standby, survival heat'], ['Spectrometer', 'Calibrated'], ['Data stored', '412 GB'], ['First science pass', 'LOI + 26 h']] },
+];
+
+export const STATUS_META = {
+  nominal: { label: 'Nominal', cls: 'ok' },
+  warning: { label: 'Caution', cls: 'warn' },
+  critical: { label: 'Critical', cls: 'crit' },
+  standby: { label: 'Standby', cls: 'idle' },
+};
